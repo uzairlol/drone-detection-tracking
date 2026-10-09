@@ -127,6 +127,62 @@ class TestRecipes:
         assert load_recipe("rtdetr_x2").family.value == "rtdetr_x2"
 
 
+class TestSupportedPythonRange:
+    """`verify-env` must enforce exactly what `pyproject.toml` declares.
+
+    These two drifted once and the cost was real: the guard refused Python 3.13
+    on the grounds that lapx and opencv-python had no wheels for it, while both
+    had shipped them and Kaggle's image had moved to 3.13. So `verify-env` failed
+    on a working environment and said nothing true.
+
+    The guard cannot just be deleted - it is what turns an untested interpreter
+    into a startup error instead of a confusing one at import. But it also must
+    not carry hand-written claims about third-party wheel availability, which rot
+    silently. So: assert the two ranges agree, and assert the range is not
+    narrower than what the current interpreter satisfies.
+    """
+
+    @staticmethod
+    def _declared_range() -> tuple[str, str]:
+        import tomllib
+        from pathlib import Path
+
+        pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+        return tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"][
+            "requires-python"
+        ].removeprefix(">=")
+
+    def test_guard_matches_pyproject(self) -> None:
+        from anti_uav.verify import PYTHON_MAX, PYTHON_MIN
+
+        floor, ceiling = self._declared_range().split(",<")
+        assert floor.split(".")[1] == str(PYTHON_MIN[1]), (
+            f"pyproject floor is {floor} but verify-env enforces {PYTHON_MIN}"
+        )
+        assert ceiling.split(".")[1] == str(PYTHON_MAX[1]), (
+            f"pyproject ceiling is {ceiling} but verify-env enforces {PYTHON_MAX}"
+        )
+
+    def test_current_interpreter_is_inside_the_supported_range(self) -> None:
+        """The suite is running, so the interpreter must satisfy the declared range."""
+        import sys
+
+        from anti_uav.verify import PYTHON_MAX, PYTHON_MIN
+
+        current = (sys.version_info.major, sys.version_info.minor)
+        assert PYTHON_MIN <= current < PYTHON_MAX
+
+    def test_three_thirteen_is_supported(self) -> None:
+        """3.13 has wheels for every pinned dep, so it must not be refused.
+
+        lapx 0.10.0 publishes cp313 manylinux wheels and opencv-python-headless
+        is a cp37-abi3 build. Excluding 3.13 blocked Kaggle, whose image ships it.
+        """
+        from anti_uav.verify import PYTHON_MAX, PYTHON_MIN
+
+        assert PYTHON_MIN <= (3, 13) < PYTHON_MAX
+
+
 class TestGpuProfiles:
     @pytest.mark.parametrize(
         "profile", ["pascal", "volta", "turing", "ampere", "ada", "blackwell", "cpu"]

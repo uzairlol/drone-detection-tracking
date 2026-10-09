@@ -7,7 +7,14 @@ name = "anti-uav"
 version = "0.1.0"
 description = "Drone detection & tracking research pipeline for the 100-camera anti-UAV system (YOLO11n / RT-DETR-x2)"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
+# 3.13 was excluded until recently because lapx and opencv-python had no 3.13
+# wheels. Both have shipped them since - lapx 0.10.0 has cp313 manylinux wheels,
+# and opencv-python-headless is a cp37-abi3 build compatible with any CPython
+# >= 3.7 - so the exclusion only blocked working environments (Kaggle ships
+# 3.13). The upper bound is 3.14: untested here, and most pinned deps publish
+# wheels a release or two behind. `anti-uav verify-env` enforces the same range
+# and a test asserts the two cannot drift apart.
 license = { text = "MIT" }
 authors = [{ name = "Anti-UAV internship" }]
 keywords = ["uav", "drone", "detection", "tracking", "yolo", "rtdetr", "anti-uav"]
