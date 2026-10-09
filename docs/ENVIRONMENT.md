@@ -116,6 +116,38 @@ no fp16 path at all, and sm_70/sm_75 have a genuinely fast one. Folding them in
 meant a Kaggle T4 trained with AMP off and batch 8 — a large throughput loss on
 the one GPU tier most people outside the lab actually have access to.
 
+### Batch is per-profile *and* per-model
+
+Every override pins an absolute batch rather than leaving `batch: -1` for
+AutoBatch, for two reasons: AutoBatch resolves to a *fraction* of free VRAM, and
+ultralytics rejects a fractional batch outright when `world_size > 1`; and it
+reads total rather than free VRAM, so it picks a batch sized for an idle card on
+a shared one.
+
+One number per profile is still not enough, because the two families do not
+share a memory profile by anything like the same factor. RT-DETR-x2's hybrid
+encoder and 100 denoising queries keep far more activations live than YOLO11n's
+backbone, so the batch that fits the CNN OOMs the transformer on the same card.
+Hence `force_batch_by_model`:
+
+```yaml
+force_batch: 32          # YOLO11n
+force_batch_by_model:
+  rtdetr_x2: 16          # half - memory scales with the query count
+```
+
+| profile | YOLO11n | RT-DETR-x2 |
+| --- | --- | --- |
+| `turing` (T4, 16 GB) | 32 | 16 |
+| `volta` (V100, 16 GB) | 32 | 16 |
+| `pascal` (GTX 1070, 8 GB) | 8 | 8 |
+| `ampere` / `ada` (24 GB) | 96 | 24 |
+| `blackwell` (32 GB) | 128 | 20 |
+
+`anti-uav matrix list` resolves both, so a planned run cannot print a batch the
+run is unable to allocate. If you OOM, halve the batch before changing anything
+else.
+
 The profile defaults to `auto` in `configs/app.yaml`, which reads the live torch
 build and the device rather than anything written down. Override when you need to:
 

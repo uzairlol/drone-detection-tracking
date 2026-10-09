@@ -22,6 +22,8 @@ imgsz_scale: 1.0
 
 force_amp: true
 force_batch: 32
+force_batch_by_model:
+  rtdetr_x2: 16
 force_imgsz: 640
 workers: 4
 

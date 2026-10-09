@@ -18,6 +18,8 @@ force_amp: true
 # ultralytics rejects outright under multi-GPU. Same reasoning as ampere - the
 # 4090 is the same size card.
 force_batch: 96
+force_batch_by_model:
+  rtdetr_x2: 24
 force_imgsz: 640
 workers: 8
 
