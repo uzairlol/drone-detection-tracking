@@ -2,7 +2,17 @@
 #
 # NOTE: this project deliberately does NOT create its own virtualenv. It reuses
 # an existing conda environment (see docs/COMMANDS.md -> "0. Environment").
-# 3.11 is the floor; 3.12 is fine. 3.13 is NOT supported because several
-# pinned transitive deps (lapx, opencv-python, ultralytics) still lack 3.13
-# wheels.
+#
+# 3.11 is the floor and 3.12 is fine. 3.13 WAS excluded here because lapx and
+# opencv-python shipped no 3.13 wheels at the time - the last cp312-only lapx
+# release was 0.5.13, and opencv needed >=4.10 for a cp37-abi3 build. That is no
+# longer true:
+#
+#   lapx 0.10.0            cp313 manylinux_2_24_x86_64 wheels exist
+#   opencv-python-headless cp37-abi3, so compatible with any CPython >= 3.7
+#   ultralytics 8.4.x      3.13 supported
+#
+# Kaggle's current image ships 3.13, so the exclusion was blocking a working
+# environment for no reason. Upper bound stays at 3.14 - untested here, and most
+# pinned deps publish wheels a release or two behind.
 3.11

@@ -129,22 +129,47 @@ def verify(profile: GpuProfile | str | None = None) -> VerifyReport:
     return report
 
 
+#: Interpreter range this project supports. Kept in step with
+#: ``requires-python`` in pyproject.toml by a test, because a guard that drifts
+#: from the declared range blocks working environments for no reason - which is
+#: exactly what happened when this said < 3.13 while Kaggle shipped 3.13.
+#:
+#: The floor is a hard requirement: the code and every pinned dependency are
+#: guaranteed there. The ceiling is a statement about what has been *tested*,
+#: not about what exists - most pinned deps publish wheels a release or two
+#: behind, so 3.14 is refused until it is exercised.
+#:
+#: This deliberately does NOT assert anything about specific packages having or
+#: lacking wheels for a given version. Those claims rot: lapx and opencv-python
+#: both lacked 3.13 wheels once and have them now, and a stale assertion is worse
+#: than no assertion because it is believed. The load-bearing question - "can
+#: the dependencies actually run here?" - is answered by _check_packages and by
+#: the fact that this module imported at all.
+PYTHON_MIN = (3, 11)
+PYTHON_MAX = (3, 14)
+
+
 def _check_python(report: VerifyReport) -> None:
     version = sys.version_info
-    ok = (3, 11) <= (version.major, version.minor) < (3, 13)
+    current = (version.major, version.minor)
+    too_old = current < PYTHON_MIN
+    too_new = current >= PYTHON_MAX
+    ok = not (too_old or too_new)
+    detail = f"{version.major}.{version.minor}.{version.micro}"
+    if too_old:
+        detail += (
+            f" - below the supported floor {PYTHON_MIN[0]}.{PYTHON_MIN[1]}; "
+            f"use 3.11 or newer"
+        )
+    elif too_new:
+        detail += (
+            f" - at or above the tested ceiling {PYTHON_MAX[0]}.{PYTHON_MAX[1]}; "
+            f"most pinned deps publish wheels a release or two behind, so this "
+            f"version is untested. Use 3.11-3.13."
+        )
     report.checks.append(
-        Check(
-            "python",
-            ok,
-            f"{version.major}.{version.minor}.{version.micro}",
-            level="error" if not ok else "info",
-        )
+        Check("python", ok, detail, level="error" if not ok else "info")
     )
-    if not ok:
-        report.checks[-1].detail += (
-            " - 3.13 lacks wheels for several pinned deps (lapx, opencv-python); "
-            "use 3.11 or 3.12"
-        )
 
 
 def _check_packages(report: VerifyReport) -> None:
