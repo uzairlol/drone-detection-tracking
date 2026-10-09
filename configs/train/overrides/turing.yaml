@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# Turing profile - T4 (sm_75, 16 GB), the Kaggle / Colab card.
+#
+# WHY THIS PROFILE EXISTS: sm_75 used to be folded into `pascal`, which forced
+# AMP off and pinned batch 8. That is wrong for a T4. Turing has full fp16
+# tensor cores - fp16 is the reason the card exists - so AMP on is a large
+# throughput win, not a risk. Treating it as Pascal threw that away.
+#
+# 16 GB is half a 3090, so batch is an absolute number rather than AutoBatch:
+# `batch: -1` resolves as a FRACTION of free VRAM, and ultralytics rejects a
+# fractional batch outright when more than one GPU is present
+# (`engine/trainer.py`: "AutoBatch with batch<1 not supported for Multi-GPU").
+# A concrete integer also happens to be divisible by 2, which DDP wants.
+#
+# workers: Kaggle gives 4 CPU cores. The override used to say 8, and ultralytics
+# opens `workers * world_size` processes, so two GPUs meant 16 dataloader
+# workers on 4 cores - a thrashing, fork-heavy mess. 2 keeps that product at 4.
+# ---------------------------------------------------------------------------
+profile: turing
+
+min_torch_cuda: "11.8"
+
+# torch.cuda.get_device_capability() -> (7, 5)
+target_capability: "7.5"
+
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: true
+force_batch: 32
+force_imgsz: 640
+workers: 2
+
+notes: >-
+  Kaggle T4x2 and Colab T4. YOLO11n at batch 32 / 640 px with AMP is roughly
+  10-14 it/s per GPU; RT-DETR-x2 is roughly 0.6-1.0 s/it, so the T4 is a
+  YOLO11n box, not an RT-DETR one. Two GPUs under DDP give a real but sub-2x
+  speedup: at this dataset size the GPUs are not the bottleneck, the 4 CPU
+  cores decoding 640 px JPEG are. Expect 1.5-3 h for 120 epochs on the dvb
+  combo tiled-free (~17.9k frames).

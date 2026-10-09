@@ -1,0 +1,219 @@
+/* anti-uav operator console
+ *
+ * Dark, dense, and readable on a dim control-room monitor. No CSS framework, no
+ * build step, no CDN - the block diagram specifies a fully offline edge
+ * deployment, so every asset here is served from this machine.
+ */
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1c2330;
+  --border: #2a3240;
+  --text: #d6deeb;
+  --muted: #7d8899;
+  --accent: #4c9aff;
+  --good: #3fb950;
+  --warn: #d29922;
+  --bad: #f85149;
+  --drone: #ff4d4d;
+  --bird: #4ade80;
+  --radius: 6px;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+header h1 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.version { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+
+nav button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  padding: 5px 11px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+nav button:hover { color: var(--text); background: var(--panel-2); }
+nav button.active { color: var(--text); background: var(--panel-2); border-color: var(--border); }
+
+main { padding: 18px; max-width: 1500px; margin: 0 auto; }
+
+h2 { font-size: 15px; margin: 22px 0 10px; font-weight: 600; }
+h2:first-child { margin-top: 0; }
+h3 { font-size: 13px; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+
+.tab { display: none; }
+.tab.active { display: block; }
+
+.note {
+  color: var(--muted);
+  font-size: 12.5px;
+  border-left: 2px solid var(--border);
+  padding: 6px 0 6px 12px;
+  margin: 8px 0 14px;
+  max-width: 90ch;
+}
+
+.muted { color: var(--muted); }
+
+pre {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+pre.scroll { max-height: 560px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.card .k { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .v { font-size: 20px; margin-top: 4px; font-family: var(--mono); }
+.card.ok .v { color: var(--good); }
+.card.warn .v { color: var(--warn); }
+.card.bad .v { color: var(--bad); }
+
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 48px;
+  background: var(--bg);
+}
+tbody tr:hover { background: var(--panel); }
+td.num { text-align: right; font-family: var(--mono); }
+
+.pill {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+}
+.pill.ok { background: rgba(63,185,80,.15); color: var(--good); }
+.pill.warn { background: rgba(210,153,34,.15); color: var(--warn); }
+.pill.bad { background: rgba(248,81,73,.15); color: var(--bad); }
+.pill.none { background: var(--panel-2); color: var(--muted); }
+
+.toolbar {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.toolbar label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--muted); }
+
+select, input, button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12.5px;
+}
+select:focus, input:focus { outline: 1px solid var(--accent); }
+input[type=number] { width: 78px; }
+.toolbar button, button.primary { cursor: pointer; background: var(--panel-2); }
+button:hover { border-color: var(--accent); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 1000px) { .two-col { grid-template-columns: 1fr; } }
+
+.chart-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 10px 0;
+  height: 300px;
+}
+
+.gate { border-left: 3px solid var(--border); padding: 6px 0 6px 11px; margin: 7px 0; }
+.gate.pass { border-color: var(--good); }
+.gate.fail { border-color: var(--bad); }
+.gate.skip { border-color: var(--warn); }
+.gate .name { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.gate .detail { font-size: 12.5px; margin-top: 2px; }
+.gate .measured { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+#pg-result { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 16px; }
+@media (max-width: 900px) { #pg-result { grid-template-columns: 1fr; } }
+#pg-result img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius); display: block; }
+
+.alert-box {
+  background: rgba(248,81,73,.08);
+  border: 1px solid rgba(248,81,73,.3);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  margin: 8px 0;
+  font-size: 12.5px;
+}
+.alert-box.ok { background: rgba(63,185,80,.08); border-color: rgba(63,185,80,.3); }
+.alert-box.warn { background: rgba(210,153,34,.08); border-color: rgba(210,153,34,.3); }
+
+footer { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 12px; }

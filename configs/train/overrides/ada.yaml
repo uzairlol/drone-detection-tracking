@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# Ada profile - RTX 4090 (sm_89) / L40S.
+#
+# Functionally identical to ampere for our purposes; kept as a separate profile
+# so `ANTI_UAV_PROFILE=ada` can be set on a 4090 lab machine and log lines read
+# unambiguously.
+# ---------------------------------------------------------------------------
+profile: ada
+
+min_torch_cuda: "12.4"
+target_capability: "8.9"
+
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: true
+# Concrete, not AutoBatch (-1): auto-detect yields a FRACTION of free VRAM, which
+# ultralytics rejects outright under multi-GPU. Same reasoning as ampere - the
+# 4090 is the same size card.
+force_batch: 96
+force_imgsz: 640
+workers: 8
+
+notes: >-
+  The default profile for the internship supervisor's 4090 if you want the log
+  to name the architecture explicitly.

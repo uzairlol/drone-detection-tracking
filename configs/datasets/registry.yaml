@@ -1,0 +1,376 @@
+# ---------------------------------------------------------------------------
+# Dataset registry - the single source of truth for acquisition + harmonisation.
+#
+# Every dataset used in the experiment matrix is listed here with:
+#   * where to get it, and what authentication it needs
+#   * the label mapping into the unified {drone, bird} space
+#   * how frames group into sequences (drives leakage-safe splitting)
+#
+# Sizes are the publishers' published figures. `anti-uav download --dry-run`
+# reports what actually landed, and data/manifests/*.json records the truth.
+# ---------------------------------------------------------------------------
+schema_version: 1
+
+# The system block diagram's nvinfer config declares exactly two classes.
+unified_labels: [drone, bird]
+
+datasets:
+
+  # ----------------------------------------------------------------------- #
+  dvb:
+    alias: dvb
+    display_name: Drone-vs-Bird Detection Challenge
+    homepage: https://wosdetc2020.wordpress.com/drone-vs-bird-detection-challenge/
+    paper: https://ieeexplore.ieee.org/ (AVSS 2020/2021 workshop challenge)
+    license: research-use-only - verify before redistribution
+    citation: >-
+      International Workshop on Small-Drone Surveillance, Detection and
+      Counteraction Techniques (WOSDETC), IEEE AVSS. Videos on request;
+      this repo consumes the public Kaggle YOLO-format mirror.
+
+    modalities: [rgb]
+    variants: []
+    default_variant: null
+
+    approx_sequences: 77
+    approx_frames: 104760        # 85_904 train + 18_856 val, per the IROS 2021 benchmark
+    median_target_px: 28         # published 34x23 px -> median edge ~28 px. Tiny.
+    has_bird_negatives: true     # the only reason this dataset is in the matrix
+    has_track_ids: false
+    has_multi_object_identity: false
+    has_visibility_flags: false
+    official_metric: null
+
+    # -- label harmonisation ------------------------------------------------ #
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {drone: drone, bird: bird}
+      ignore_labels: []
+
+    # -- grouping ---------------------------------------------------------- #
+    # Applied to the normalised path `frames/<sequence_id>/rgb/<stem>.jpg`
+    # emitted by data/convert/dvb.py. Normalise-then-group is deliberate: a
+    # regex over the publisher's original filenames would silently change
+    # meaning if a folder name changed.
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+
+    # -- acquisition ------------------------------------------------------- #
+    sources:
+      - kind: kaggle
+        url: romsham/dronevsbird-foryolo
+        label: Kaggle - dronevsbird-foryolo (YOLO-format mirror)
+        approx_size_gb: 14.0
+        needs_credentials: true
+        notes: >-
+          Needs a free Kaggle account and `~/.kaggle/kaggle.json`
+          (kaggle login --accept-dictionary). Ships images + YOLO .txt labels.
+          Classes in the mirror are unlabeled 0/1 - 0=drone, 1=bird. The
+          converter verifies this against the label histogram and fails loudly
+          if the ratio is inverted.
+
+      - kind: http
+        url: https://github.com/wosdetc/challenge
+        label: GitHub - official challenge annotations (no videos)
+        approx_size_gb: 0.01
+        needs_credentials: false
+        notes: >-
+          Annotations only. Per-video .txt in the format
+          `<frame> <n> <x> <y> <w> <h> [x y w h ...]`. Useful for verifying the
+          Kaggle mirror's box coordinates, not as a standalone train source
+          because the videos are distributed on request.
+
+    ingest:
+      stride: 2                   # 25-30 fps source; stride 2 still leaves
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920         # cap the long edge; native runs to 3840x2160
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      The hardest dataset in the matrix and the most important one: 0.10% mean
+      object area, and it is the only source of genuine bird negatives. A model
+      that never sees this dataset will happily classify birds as drones, which
+      is precisely the failure mode the whole anti-UAV system exists to prevent.
+
+    caveats:
+      - >-
+        The Kaggle mirror renames classes to bare integers. The converter maps
+        0 -> drone, 1 -> bird and cross-checks the class ratio against the
+        published statistics; a mismatch aborts the conversion.
+      - >-
+        Sources at 3840x2160. ingest.max_dimension=1920 halves storage with no
+        measurable recall cost at a 28 px target.
+
+  # ----------------------------------------------------------------------- #
+  mavvid:
+    alias: mavvid
+    display_name: MAV-VID (Multirotor Aerial Vehicle VID)
+    homepage: https://bitbucket.org/alejodosr/mav-vid-dataset
+    paper: https://arxiv.org/ (Rodriguez-Ramos et al., Cranfield University)
+    license: research-use-only - verify before redistribution
+    citation: >-
+      Rodriguez-Ramos et al., Multirotor Aerial Vehicle VID (MAV-VID).
+      Images with YOLO annotations, pre-split into train/val.
+
+    modalities: [rgb]
+    variants: []
+    default_variant: null
+
+    approx_sequences: 64          # 53 train videos + 11 val
+    approx_frames: 40232          # 29_500 train + 10_732 val
+    median_target_px: 171         # published 215x128 px -> median edge ~171 px
+    has_bird_negatives: true
+    has_track_ids: false
+    has_multi_object_identity: false
+    has_visibility_flags: false
+    official_metric: null
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {drone: drone, bird: bird}
+      ignore_labels: []
+      # NOTE: the published mirror uses lowercase strings, but variants have
+      # shipped with 'drone'/'Drone'/'0'. The converter normalises case and
+      # numeric ids, then asserts every observed label was mapped.
+
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+
+    sources:
+      - kind: bitbucket
+        url: https://bitbucket.org/alejodosr/mav-vid-dataset
+        label: Bitbucket mirror - mav-vid-dataset
+        approx_size_gb: 6.0
+        needs_credentials: false
+        notes: >-
+          The canonical Kaggle page (alejodosr/multirotor-aerial-vehicle-vid-
+          mavvid-dataset) is dead. This Bitbucket repo, linked from the
+          original authors' project page, is the surviving copy. It is already
+          YOLO-annotated and pre-split, so ingest is a copy + rename rather
+          than video decoding.
+
+      - kind: kaggle
+        url: alejodosr/multirotor-aerial-vehicle-vid-mavvid-dataset
+        label: Kaggle (original, may be dead)
+        approx_size_gb: 6.0
+        needs_credentials: true
+        notes: Fallback only. The UAVDetectionTrackingBenchmark repo reports the
+          Kaggle page no longer resolves.
+
+    ingest:
+      stride: 1                   # already frame-extracted by the publisher
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      Easiest dataset in the matrix: pre-annotated, pre-split, larger targets.
+      Good for a first sanity training run and as the "easy" column of the
+      comparison table - it separates "the detector is wrong" from "the dataset
+      is hard".
+
+    caveats:
+      - >-
+        Videos captured from other drones, ground cameras and handheld devices.
+        The handheld subset has ego-motion, so it behaves differently at test
+        time than the fixed-camera sequences that dominate deployment.
+
+  # ----------------------------------------------------------------------- #
+  antiuav:
+    alias: antiuav
+    display_name: Anti-UAV
+    homepage: https://github.com/ZhaoJ9014/Anti-UAV
+    paper: https://arxiv.org/abs/2306.15767
+    license: MIT (code); dataset redistribution restricted by publisher
+    citation: >-
+      Zhao et al., The 3rd/4th Anti-UAV Workshop & Challenge. Wang et al.,
+      PLRUT (PRCV 2024); Xia et al., Unified RGB-T Tracking (IJCAI 2024).
+
+    modalities: [rgb, ir]
+    variants: ["300", "410", "600"]
+    default_variant: "300"
+
+    approx_sequences: 300
+    approx_frames: 225000
+    median_target_px: 92          # RGB 125x59 px, IR 52x29 px published
+    has_bird_negatives: false     # drone-only; see notes
+    has_track_ids: true
+    has_multi_object_identity: false     # one target per sequence; id=1 everywhere
+    has_visibility_flags: true
+    official_metric: anti-uav tracking accuracy (IoU x visibility flags)
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {target: drone, drone: drone, uav: drone, "0": drone, "1": drone}
+      ignore_labels: [ignore, ignore_region]
+
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+      split_pattern: null          # <modality> is already in the normalised path
+
+    sources:
+      - kind: gdrive
+        url: 1NPYaop35ocVTYWHOYQQHn8YHsM9jmLGr
+        password: sagx
+        label: Google Drive - Anti-UAV300 (RGB + IR) [RECOMMENDED]
+        approx_size_gb: 60.0
+        needs_credentials: false
+        notes: >-
+          The publisher recommends 300 because it is the only variant with both
+          RGB and IR, matching the fleet's mixed visible/thermal coverage.
+          Archive is distributed as a zip with an extraction code; the code is
+          recorded below and printed by `anti-uav download --dry-run`, so you
+          never need to hunt for it.
+
+      - kind: modelscope
+        url: ly261666/3rd_Anti-UAV
+        label: ModelScope - Anti-UAV600 (IR only, no auth)
+        approx_size_gb: 120.0
+        needs_credentials: false
+        notes: >-
+          Fallback that needs no account at all. IR only and larger, so a run on
+          it is NOT comparable to the 300 runs - keep it in its own combo.
+
+      - kind: baidu
+        url: https://pan.baidu.com/s/1PbINXhxc-722NWoO8P2AdQ
+        password: wfds
+        label: Baidu Pan - Anti-UAV410 (IR only)
+        approx_size_gb: 40.0
+        needs_credentials: true
+        notes: >-
+          IR only. Baidu requires a logged-in session; see the MM-UAV notes in
+          docs/DATASETS.md for the cookie workflow, which is identical.
+
+    ingest:
+      stride: 3                   # 30 fps sources -> ~10 fps, ample for a
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      The only dataset with official per-frame visibility flags, so it is the
+      natural place to validate the rule layer's persistence and occlusion
+      handling, and the natural source of MOT-style ground truth for the
+      local-tracker benchmark.
+
+    caveats:
+      - >-
+        NO BIRD NEGATIVES. Anti-UAV is drone-only, so a model trained on it alone
+        has never been told what a bird looks like. Its validation precision will
+        look excellent and mean nothing. This is exactly why `dvb` and `mavvid`
+        are in the matrix, and why `anti-uav stats` prints a class-coverage table.
+      - >-
+        RGB and IR are UNALIGNED - the publisher states this explicitly. Do not
+        assume pixel correspondence between modalities; the fusion modules treat
+        them as independent sequences.
+      - >-
+        'target' / '0' all map to drone. Different challenge releases label the
+        same object differently; the converter reports which spelling it saw.
+
+  # ----------------------------------------------------------------------- #
+  mmuav:
+    alias: mmuav
+    display_name: MM-UAV (Tri-Modal Multi-UAV Tracking Benchmark)
+    homepage: https://xuefeng-zhu5.github.io/MM-UAV/
+    paper: https://arxiv.org/abs/2511.18344
+    license: research-use-only - confirm with authors
+    citation: >-
+      Xu, Gu, Zhu, Wu, Kittler. A Tri-Modal Dataset and a Baseline System for
+      Tracking Unmanned Aerial Vehicles. arXiv:2511.18344 (2025).
+
+    modalities: [rgb, ir, event]
+    variants: [full, subset]
+    default_variant: subset
+
+    approx_sequences: 1321        # 1_200 train + 121 test
+    approx_frames: 2800000        # per modality
+    median_target_px: 12          # published 12x5 px (RGB), 15x7 (IR)
+    has_bird_negatives: false
+    has_track_ids: true           # MOT format, multi-object, identity-preserving
+    has_multi_object_identity: true
+    has_visibility_flags: false
+    official_metric: MOTA / HOTA / IDF1 / IDs
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {UAV: drone, uav: drone, drone: drone, "1": drone}
+      ignore_labels: [ignore]
+
+    group:
+      pattern: 'frames/(?P<sequence>[?0-9]+)'
+      group: 1
+
+    # RGB frames are only 640x360, so the default 640 px tile would crop the
+    # whole frame and magnify nothing. A 256 px window upscaled to imgsz=640 is
+    # a 2.5x magnification, which turns a 12x5 px drone into ~30x12 px.
+    tiling_override:
+      enabled: true
+      tile_size: 256
+      overlap: 0.30
+      min_visibility: 0.40
+      random_offset: true
+
+    sources:
+      - kind: baidu
+        url: https://pan.baidu.com/s/1xYzvams9X972rGBm-RgY_g?pwd=mmmm
+        password: mmmm
+        label: Baidu Pan - MM-UAV (full, ~400 GB extracted)
+        approx_size_gb: 380.0
+        needs_credentials: true
+        exclude_globs:
+          - '**/event_frame/**'      # ~1/3 of the payload, unusable for RGB training
+          - '**/ir_frame/**'         # keep unless you explicitly ask for IR
+          - '**/sot_groundtruth/**'
+        notes: >-
+          ONLY distribution channel so far; the Google Drive mirror is listed
+          as "coming soon" on the project page. See docs/DATASETS.md for the
+          cookie + captcha walkthrough and the disk arithmetic.
+
+    ingest:
+      # Frames are already extracted by the publisher, so stride is applied at
+      # conversion time rather than by re-decoding.
+      stride: 2
+      max_frames_per_sequence: 600
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1280
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      The hardest data here and the most valuable for the tracking half of the
+      project: real multi-object MOT with identity preserved across
+      leave-and-re-enter, which is exactly what the global track manager's
+      fragmentation repair has to cope with.
+
+    caveats:
+      - >-
+        12x5 px median target. At a 640 px input a drone shrinks to roughly
+        6x3 px and is simply not detectable. Tiling is mandatory for any combo
+        containing mmuav - see configs/matrix.yaml force_tiling.
+      - >-
+        The Event modality (~1/3 of the download) cannot train an RGB detector.
+        It is excluded by default in the source's exclude_globs.
+      - >-
+        Strict trajectory annotation: a UAV that leaves and returns keeps its
+        original id. Most MOT metrics penalise this as an id switch, so scores
+        here are not directly comparable to MOTA on MOT17-style data.
+      - >-
+        Baidu Pan throttles aggressively and will interrupt multi-GB transfers.
+        Budget several attempts.

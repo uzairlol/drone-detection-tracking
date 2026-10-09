@@ -1,0 +1,7 @@
+{
+  "_comment": "TEMPLATE ONLY - not a real credential. Copy to ~/.kaggle/kaggle.json (NOT here) and fill in. anti-uav reads ~/.kaggle/kaggle.json, ~/.kaggle/access_token and ~/.kaggle/access_token.txt, so you do not need to put anything in data/raw/_credentials/ for Kaggle.",
+  "_how_to_get": "kaggle login --accept-dictionary  (writes the real file for you)",
+  "_verify": "anti-uav download --dataset dvb --dry-run",
+  "username": "your-kaggle-username",
+  "key": "your-kaggle-api-key"
+}

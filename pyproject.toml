@@ -1,0 +1,194 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "anti-uav"
+version = "0.1.0"
+description = "Drone detection & tracking research pipeline for the 100-camera anti-UAV system (YOLO11n / RT-DETR-x2)"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "Anti-UAV internship" }]
+keywords = ["uav", "drone", "detection", "tracking", "yolo", "rtdetr", "anti-uav"]
+
+# Base set. Deliberately CUDA-agnostic: the RTX 4090/5090 trainer boxes and the
+# local GTX 1070 (sm_61) work box both install torch separately via
+# scripts/setup_env.ps1 -Profile {pascal|ampere|blackwell}.
+#
+# torch/torchvision are declared but should normally already be satisfied by
+# the platform image (Kaggle, Colab, most cloud VM images ship a CUDA-matched
+# pair). Installing them again is a ~2.5 GB download and risks replacing a
+# working build. `uv pip install --system -e .` leaves an already-satisfied
+# requirement alone; that is the intended install path there.
+dependencies = [
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "numpy>=1.24,<3",
+    "pyyaml>=6.0",
+    "pydantic>=2.6",
+    "typer>=0.12",
+    "rich>=13.0",
+    "psutil>=5.9",
+    "tqdm>=4.66",
+    "pillow>=10.0",
+    # Headless on Linux. This project never calls imshow and never installs a
+    # GUI toolkit; the plain `opencv-python` build links against libGL and
+    # friends that a headless container (Kaggle, Colab, most CI images) does
+    # not ship, so `import cv2` raises ImportError at the first call. The
+    # Windows dev box keeps the normal build so cv2's GUI paths stay testable.
+    "opencv-python-headless>=4.9; sys_platform != 'win32'",
+    "opencv-python>=4.9; sys_platform == 'win32'",
+    "scipy>=1.11",
+    "pandas>=2.0",
+    "matplotlib>=3.8",
+    "requests>=2.31",
+    "lapx>=0.5",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "huggingface-hub>=0.23",
+]
+
+[project.optional-dependencies]
+# Dataset acquisition. Kept optional so a CPU-only install does not need them.
+download = [
+    "gdown>=5.1",
+    "kaggle>=1.6",
+    "modelscope>=1.13",
+]
+# Training / inference backends.
+train = [
+    "ultralytics>=8.3",
+]
+# ONNX + TensorRT export.
+export = [
+    "onnx>=1.16",
+    "onnxruntime>=1.18",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+all = [
+    "anti-uav[download,train,export,dev]",
+]
+
+[project.scripts]
+anti-uav = "anti_uav.cli:main"
+
+[project.urls]
+Homepage = "https://example.invalid/anti-uav"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anti_uav"]
+# The UI templates, static bundle and DeepStream config are all *inside* the
+# package directory, so `packages` already ships them. Listing them again under
+# force-include made hatchling add each file to the wheel twice, which fails the
+# build with "A second file is being added to the wheel archive at the same
+# path". No force-include table is needed; these are ordinary package data.
+artifacts = [
+    "src/anti_uav/ui/templates/**/*.html",
+    "src/anti_uav/ui/static/**/*",
+    "src/anti_uav/deploy/deepstream/*.cfg",
+]
+
+# --------------------------------------------------------------------------- #
+# Tooling
+# --------------------------------------------------------------------------- #
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["data", "artifacts", "docs"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T20",  # flake8-print
+    "SIM",  # flake8-simplify
+    "PTH",  # flake8-use-pathlib
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",    # line-length handled by the formatter
+    "B008",    # function call in default arg - FastAPI Depends() needs it
+    "N803",    # argname_case - tracking boxes use x1y1x2y2 naming conventions
+    "N806",    # non-lowercase variable in function - cls too
+    "SIM108",  # ternary instead of if-else - not always clearer
+    "RUF001",  # ambiguous unicode in strings - we use sigma and omega symbols
+    "RUF002",
+    "RUF003",
+    "A002",    # shadowing a builtin arg
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["T20", "B011", "SIM117"]
+# The smoke scripts *are* console programs: print() is their output channel.
+"scripts/**" = ["T20", "E741"]
+# verify.py falls back to print() when it is called without a rich console.
+"src/anti_uav/cli.py" = ["T20"]
+"src/anti_uav/verify.py" = ["T20"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["anti_uav"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+packages = ["anti_uav"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+# numpy's stubs return ndarray[Any, Any] from most ufuncs and reductions, so
+# every geometry helper trips this. Turning it off buys real signal instead of
+# ~20 identical complaints in utils/geometry.py; the return annotations still
+# declare the intended type.
+warn_return_any = false
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = "(^data/|^artifacts/|^docs/)"
+
+[[tool.mypy.overrides]]
+module = ["ultralytics.*", "lap.*", "cv2.*", "onnx.*", "onnxruntime.*", "gdown.*", "modelscope.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "slow: marks tests that touch real data or are long-running",
+    "integration: marks tests that exercise more than one module",
+    "gpu: marks tests that require a CUDA device",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.coverage.run]
+source = ["src/anti_uav"]
+branch = true
+omit = ["*/ui/templates/*", "*/deploy/deepstream/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

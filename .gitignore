@@ -1,0 +1,100 @@
+# ---------------------------------------------------------------- datasets --
+# Everything under data/ and artifacts/ is reproducible from configs/ + scripts.
+#
+# Note the pattern shape: `data/**` ignores the payloads, and the `!data/**/`
+# rule re-opens the directories so git will descend into them. Without that
+# un-ignore, git never looks inside an excluded directory and every negation
+# below it would be silently inert - which is how the per-dataset placeholder
+# READMEs (which document what belongs in each slot) would vanish on `git add`.
+data/**
+!data/**/
+!data/**/README.md
+!data/**/*.example
+data/**/*.zip
+data/**/*.tar*
+data/**/*.mp4
+data/**/*.avi
+data/**/*.npy
+
+# --------------------------------------------------------------- artifacts --
+# Same shape as data/ above: ignore the output, keep the placeholder docs.
+artifacts/**
+!artifacts/**/
+!artifacts/**/README.md
+artifacts/*.db
+artifacts/*.sqlite3
+
+# ------------------------------------------------------------------ python --
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ------------------------------------------------------------------ venvs ---
+.venv/
+venv/
+env/
+.python-version.local
+
+# ------------------------------------------------------------------ caches --
+.uv_cache/
+.uv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+*.egg
+.cache
+
+# --------------------------------------------------------------- ml weights --
+# Pretrained backbone/detector weights are re-fetchable; never commit them.
+*.pt
+*.pth
+*.onnx
+*.engine
+*.torchscript
+*.t7
+!tests/fixtures/*.txt
+
+# ------------------------------------------------------------------ secrets --
+.env
+.env.*
+!.env.example
+secrets.yaml
+*_token.json
+*_cookie.json
+cookies.txt
+kaggle.json
+
+# ------------------------------------------------------------- editors/os ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --------------------------------------------------------------- notebooks ---
+# Commit the .ipynb source, never its execution state. Outputs carry absolute
+# /kaggle/tmp and /kaggle/working paths from whichever machine last ran them,
+# which is misleading on every other machine and leaks the local file layout.
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+*.ipynb_checkpoints
+# A saved "Save Version" from Kaggle folds both the source and its outputs into
+# one file. Strip outputs before committing:
+#   jupyter nbconvert --clear-output --inplace notebooks/*.ipynb
+notebooks/**/*.executed.ipynb
+
+# ------------------------------------------------------------------- docs ---
+docs/diagrams/*.pdf
+docs/diagrams/_mermaid_work/
+docs/_build/

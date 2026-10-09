@@ -1,0 +1,133 @@
+# ---------------------------------------------------------------------------
+# drone_rules.yaml - the central, tunable threshold layer.
+#
+# Section 4 of the system block diagram. Every value below is a threshold that
+# decides whether a track becomes a drone alert, and every one of them is a
+# place where the system can be tuned without a retrain. GitOps-managed: the
+# per-node DeepStream configs and the global coordinator both render from this
+# single file (see the CONFIG -.-> edges in the block diagram).
+#
+# Change a value here, redeploy, observe. Do NOT retrain to move these.
+# ---------------------------------------------------------------------------
+schema_version: 1
+
+notes: >-
+  Thresholds are transcribed from the "DRONE RULES / THRESHOLDS / VERIFICATION"
+  block of the system block diagram. validate with
+  `anti-uav rules validate`; dry-run a recorded session with
+  `anti-uav rules replay`.
+
+# --------------------------------------------------------------------------- #
+confidence:
+  # A detection must clear this to start a track...
+  initiate: 0.60
+  # ...and stay above this to keep it. The gap is hysteresis: without it a
+  # detector hovering at the threshold produces tracks that flicker on and off,
+  # and the persistence counter below never accumulates.
+  maintain: 0.35
+
+# --------------------------------------------------------------------------- #
+persistence:
+  # Both a hit count and a wall-clock floor. Hits alone would let a 1 fps
+  # degraded stream accumulate 12 frames over 12 seconds, which is far too slow
+  # for a 30 fps camera.
+  min_hits: 12
+  min_duration_s: 1.0
+  # An occlusion may break the sequence for at most this many frames. Beyond it
+  # the track is terminated and re-acquired, because a longer gap usually means
+  # the target left the scene entirely.
+  max_gap_frames: 5
+  alert_min_hits: 12
+
+# --------------------------------------------------------------------------- #
+kinematics:
+  # Stationary objects are birds or debris; a UAV under 1.5 m/s in the air is
+  # almost certainly not one of ours being flown.
+  min_speed_m_s: 1.5
+  # Above 35 m/s nothing in the threat catalogue flies, so we are tracking a
+  # bird or a moving cloud edge.
+  max_speed_m_s: 35.0
+  # Birds yaw faster than any quadcopter in this threat set.
+  max_turn_rate_deg_s: 90.0
+  # Hovering is allowed (a loitering drone is the primary threat) but only
+  # under a tight vertical budget, which rejects flags on strings and kites.
+  hover_threshold_m: 0.5
+  hover_duration_s: 2.0
+
+# --------------------------------------------------------------------------- #
+spatial:
+  require_above_horizon: true
+  # horizon_y is left null here on purpose: it is a per-camera property and
+  # belongs in coverage_map.yaml, which carries a horizon_y for each of the 100
+  # cameras. Set it here only for a single-camera debug session.
+  horizon_y: null
+  geofence_breach_suppresses: true
+  # Height of the ground plane used to turn pixel motion into m/s. Set from the
+  # site's surveyed elevation; null means "speed estimates are unavailable" and
+  # the kinematics rule is skipped rather than guessed.
+  ground_plane_z_m: null
+
+# --------------------------------------------------------------------------- #
+cross_camera:
+  # Two independent views. One view cannot distinguish a drone from a bird with
+  # enough confidence to page anyone.
+  min_cameras: 2
+  max_window_s: 3.0
+  # Require the two views to come from different worker nodes. Two cameras on the
+  # same node share a decoder, a tracker and a failure domain, so they are not
+  # independent evidence.
+  require_distinct_nodes: false
+  # Positions of the same target seen by two cameras must agree to within this.
+  # Generous because the calibration is survey-grade, not metrology-grade.
+  max_position_disagreement_m: 25.0
+
+# --------------------------------------------------------------------------- #
+tracking:
+  # BoT-SORT locally: it fuses appearance, which matters when a drone crosses a
+  # bird and IoU association alone would swap identities.
+  local_tracker: botsort
+
+  # A track is declared lost after this many frames without a matched detection.
+  # 4 frames at 30 fps is 133 ms - shorter than one PTZ move can complete, so
+  # recovery has to start before the old track dies.
+  max_target_age_frames: 4
+
+  # Below this pixel height a target cannot be tracked reliably by any tracker in
+  # this repo; the risk estimator treats the camera as unable to continue the
+  # track and starts looking for a receiver.
+  min_trackable_height_px: 15.0
+
+  # Begin a handoff this long before the predicted FOV exit.
+  handoff_trigger_lead_s: 2.0
+
+  # A handoff only completes once the receiving camera has produced this many
+  # matching detections inside the verify window. Without the confirmation step
+  # the global identity is transferred into empty air roughly as often as not.
+  handoff_verify_frames: 3
+  handoff_verify_window_s: 0.5
+
+  # Re-acquisition deadline after a track is declared lost.
+  recovery_budget_s: 1.5
+
+  # Cosine similarity floor for the appearance gate during cross-camera
+  # association.
+  reid_similarity_threshold: 0.55
+
+  # Combined motion+appearance cost above which a pair is not associated.
+  # 1 - IoU equivalent; 0.75 leaves room for a fast-moving target to match at
+  # 0.25 IoU when appearance agrees strongly.
+  max_association_cost: 0.75
+
+  # Constant-velocity Kalman tuning. Process noise is the standard deviation of
+  # the acceleration term, i.e. how much we believe a UAV can change velocity
+  # between frames. Measurement noise reflects survey-grade calibration.
+  process_noise_std_m_s: 0.35
+  measurement_noise_std_m: 1.0
+
+  # When the 3-sigma uncertainty ellipse exceeds this radius the track is
+  # considered lost even if a detection keeps arriving - the detections have
+  # become mutually inconsistent and one of them is a different object.
+  max_uncertainty_radius_m: 18.0
+
+# --------------------------------------------------------------------------- #
+severity_order: [info, warn, critical]

@@ -1,0 +1,142 @@
+# ---------------------------------------------------------------------------
+# Experiment matrix - every run this project intends to produce.
+#
+# 2 model families x 7 dataset combos = 14 runs, plus cross-dataset evaluation
+# (train on each combo, test on each of the four datasets) for the benchmark
+# table.
+#
+# Why these 7 combos:
+#   1-4  single-dataset runs isolate each source's difficulty and contribution
+#   5    drone+bird union (the two sources with real bird negatives)
+#   6    + Anti-UAV: adds a second resolution, a second modality and official
+#        visibility flags
+#   7    everything: the candidate production model
+#
+# Tiling is decided PER DATASET, not per combo: a dataset is tiled when its
+# median_target_px <= tiling_threshold_px. Tiling the whole dvb+mavvid combo
+# would penalise MAV-VID's 171 px targets for no reason while dvb's 28 px targets
+# genuinely need it. cost is therefore paid only where recall lives.
+# ---------------------------------------------------------------------------
+schema_version: 1
+
+models:
+  - yolo11n
+  - rtdetr_x2
+
+default_imgsz: 640
+
+# A dataset is tiled when median_target_px <= this. 40 px is where a target
+# stops being reliably detectable after letterboxing to 640.
+tiling_threshold_px: 40
+
+cross_dataset_eval: true
+cross_eval_datasets: [dvb, mavvid, antiuav, mmuav]
+
+seed: 0
+
+notes: >-
+  RT-DETR-x2 is the accuracy reference, not the edge candidate. It trains in the
+  same pipeline with configs/train/rtdetr_x2.yaml, which differs from the YOLO
+  recipe in exactly three places: no mosaic, a lower base LR, and a fixed
+  (non-scaled) batch so the hybrid encoder's BN statistics stay stable.
+
+combos:
+  # -- single dataset --------------------------------------------------------
+  - slug: dvb
+    datasets: [dvb]
+    description: >-
+      Drone-vs-Bird alone. 0.10% mean object area, and the only source of real
+      bird negatives. Tiled at 640 px.
+    force_tiling: true
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      The single most informative run in the matrix. If bird recall is not
+      meaningful here, nothing downstream works.
+
+  - slug: mavvid
+    datasets: [mavvid]
+    description: >-
+      MAV-VID alone. 215x128 px targets, pre-annotated, 40k frames. No tiling.
+    force_tiling: false
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      Sanity run. Should reach high mAP quickly; use it to validate the pipeline
+      before spending days on the hard datasets.
+
+  - slug: antiuav
+    datasets: [antiuav]
+    description: >-
+      Anti-UAV300 alone (RGB + IR, both mapped to `drone`). No tiling.
+    force_tiling: false
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      DRONE-ONLY. Validation precision here is not evidence of anything, because
+      the val set contains no birds. Compare this run's mAP against the mmuav and
+      dvb rows, never in isolation.
+
+  - slug: mmuav
+    datasets: [mmuav]
+    description: >-
+      MM-UAV RGB subset. 12x5 px targets, tiled at 256 px for a 2.5x
+      magnification. Multi-object MOT ground truth.
+    force_tiling: true
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      Needs the Baidu download to have succeeded. `anti-uav build` skips this
+      combo with a warning if data/interim/mmuav is absent, so the rest of the
+      matrix still runs.
+
+  # -- cumulative ------------------------------------------------------------
+  - slug: dvb+mavvid
+    datasets: [dvb, mavvid]
+    description: >-
+      Both bird-negative sources. Per-dataset tiling: dvb tiled at 640,
+      mavvid untiled.
+    force_tiling: null
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      Two very different target scales in one model - this run is the test of
+      whether a single detector can hold both. Expect a small mAP drop vs each
+      dataset alone, which is the scale effect rather than a real regression.
+
+  - slug: dvb+mavvid+antiuav
+    datasets: [dvb, mavvid, antiuav]
+    description: >-
+      Adds Anti-UAV: a second sensor modality (IR) and official visibility flags.
+    force_tiling: null
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      First combo where RGB and thermal IR are mixed in one training set.
+      aug.ir_grayscale_probability is raised here so the detector cannot use
+      palette as a shortcut for modality.
+
+  - slug: all4
+    datasets: [dvb, mavvid, antiuav, mmuav]
+    description: >-
+      All four sources. Candidate production model. Two modalities, three target
+      scales, both bird-positive and bird-negative data.
+    force_tiling: null
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      The row to deploy. Expect it to be the best cross-dataset generaliser and
+      the worst absolute performer on any single dataset - that trade is the
+      point.
+
+# ---------------------------------------------------------------------------
+# Disabled combos, kept here so the intent is recorded rather than lost.
+# ---------------------------------------------------------------------------
+#   - slug: antiuav600
+#     datasets: [antiuav]
+#     description: Anti-UAV600 (ModelScope, IR only) as its own combo.
+#     enabled: false
+#     notes: >
+#       Kept disabled by default. IR-only and 2x the size, so it is not
+#       comparable to the Anti-UAV300 rows; enable it only if the 300 download
+#       fails and you want a fallback.

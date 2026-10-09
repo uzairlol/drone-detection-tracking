@@ -1,0 +1,3475 @@
+# -------------------------------------------------------------------------
+# Coverage map - 100 cameras across 8 DeepStream worker nodes.
+#
+# GENERATED FILE. Edit scripts/gen_coverage_map.py and re-run:
+#     uv run python scripts/gen_coverage_map.py
+#
+# Section 3 of the system block diagram. Consumed by:
+#   * tracking/coordination/coverage.py  - which cameras see where
+#   * tracking/coordination/scheduler.py - keeps >=1 camera per protected zone
+#   * tracking/coordination/risk.py      - FOV exit prediction
+#   * tracking/coordination/handoff.py   - scored receiver selection
+#   * tracking/coordination/ptz.py       - ONVIF absolute-move targets
+#   * rules/engine.py                    - above-horizon + geofence tests
+#
+# GitOps-managed: this file plus drone_rules.yaml are the only two inputs
+# the per-node DeepStream configs are rendered from.
+# -------------------------------------------------------------------------
+
+schema_version: 1
+frame: site-local-ENU
+default_ground_plane_z_m: 0.0
+nominal_range_m: 320.0
+cameras:
+- id: fixed-001
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 36.5
+    - 0.0
+    - 6.0
+    yaw_deg: 49.41
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-002
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 109.5
+    - 0.0
+    - 6.0
+    yaw_deg: 43.2
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-003
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 182.5
+    - 0.0
+    - 6.0
+    yaw_deg: 35.41
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-004
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 255.5
+    - 0.0
+    - 6.0
+    yaw_deg: 25.77
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-005
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 328.5
+    - 0.0
+    - 6.0
+    yaw_deg: 14.29
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-006
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 401.5
+    - 0.0
+    - 6.0
+    yaw_deg: 1.52
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-007
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 474.5
+    - 0.0
+    - 6.0
+    yaw_deg: 348.6
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-008
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 547.5
+    - 0.0
+    - 6.0
+    yaw_deg: 336.75
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-009
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 620.5
+    - 0.0
+    - 6.0
+    yaw_deg: 326.66
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-010
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 693.5
+    - 0.0
+    - 6.0
+    yaw_deg: 318.46
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-011
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 766.5
+    - 0.0
+    - 6.0
+    yaw_deg: 311.91
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-012
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 19.5
+    - 6.0
+    yaw_deg: 306.24
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-013
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 92.5
+    - 6.0
+    yaw_deg: 299.02
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-014
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 165.5
+    - 6.0
+    yaw_deg: 290.65
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-015
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 238.5
+    - 6.0
+    yaw_deg: 281.24
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-016
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 311.5
+    - 6.0
+    yaw_deg: 271.19
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-017
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 384.5
+    - 6.0
+    yaw_deg: 261.06
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-018
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 457.5
+    - 6.0
+    yaw_deg: 251.46
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-019
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 530.5
+    - 6.0
+    yaw_deg: 242.82
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-020
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 820.0
+    - 603.5
+    - 6.0
+    yaw_deg: 235.34
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-021
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 783.5
+    - 640.0
+    - 6.0
+    yaw_deg: 229.41
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-022
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 710.5
+    - 640.0
+    - 6.0
+    yaw_deg: 223.2
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-023
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 637.5
+    - 640.0
+    - 6.0
+    yaw_deg: 215.41
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-024
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 564.5
+    - 640.0
+    - 6.0
+    yaw_deg: 205.77
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-025
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 491.5
+    - 640.0
+    - 6.0
+    yaw_deg: 194.29
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-026
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 418.5
+    - 640.0
+    - 6.0
+    yaw_deg: 181.52
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-027
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 345.5
+    - 640.0
+    - 6.0
+    yaw_deg: 168.6
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-028
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 272.5
+    - 640.0
+    - 6.0
+    yaw_deg: 156.75
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-029
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 199.5
+    - 640.0
+    - 6.0
+    yaw_deg: 146.66
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-030
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 126.5
+    - 640.0
+    - 6.0
+    yaw_deg: 138.46
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-031
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 53.5
+    - 640.0
+    - 6.0
+    yaw_deg: 131.91
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-032
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 620.5
+    - 6.0
+    yaw_deg: 126.24
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-033
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 547.5
+    - 6.0
+    yaw_deg: 119.02
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-034
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 474.5
+    - 6.0
+    yaw_deg: 110.65
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-035
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 401.5
+    - 6.0
+    yaw_deg: 101.24
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-036
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 328.5
+    - 6.0
+    yaw_deg: 91.19
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-037
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 255.5
+    - 6.0
+    yaw_deg: 81.06
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-038
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 182.5
+    - 6.0
+    yaw_deg: 71.46
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-039
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 109.5
+    - 6.0
+    yaw_deg: 62.82
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-040
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 0.0
+    - 36.5
+    - 6.0
+    yaw_deg: 55.34
+    pitch_deg: -8.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-perimeter
+- id: fixed-041
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 182.5
+    - 184.0
+    - 6.0
+    yaw_deg: 59.13
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-042
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 247.5
+    - 184.0
+    - 6.0
+    yaw_deg: 50.07
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-043
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 312.5
+    - 184.0
+    - 6.0
+    yaw_deg: 35.64
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-044
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 377.5
+    - 184.0
+    - 6.0
+    yaw_deg: 13.44
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-045
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 442.5
+    - 184.0
+    - 6.0
+    yaw_deg: 346.56
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-046
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 507.5
+    - 184.0
+    - 6.0
+    yaw_deg: 324.36
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-047
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 572.5
+    - 184.0
+    - 6.0
+    yaw_deg: 309.93
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-048
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 637.5
+    - 184.0
+    - 6.0
+    yaw_deg: 300.87
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-049
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 182.5
+    - 252.0
+    - 6.0
+    yaw_deg: 73.36
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-050
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 247.5
+    - 252.0
+    - 6.0
+    yaw_deg: 67.29
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-051
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 312.5
+    - 252.0
+    - 6.0
+    yaw_deg: 55.11
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-052
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 377.5
+    - 252.0
+    - 6.0
+    yaw_deg: 25.55
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-053
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 442.5
+    - 252.0
+    - 6.0
+    yaw_deg: 334.45
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-054
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 507.5
+    - 252.0
+    - 6.0
+    yaw_deg: 304.89
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-055
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 572.5
+    - 252.0
+    - 6.0
+    yaw_deg: 292.71
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-056
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 637.5
+    - 252.0
+    - 6.0
+    yaw_deg: 286.64
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-057
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 182.5
+    - 320.0
+    - 6.0
+    yaw_deg: 90.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-058
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 247.5
+    - 320.0
+    - 6.0
+    yaw_deg: 90.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-059
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 312.5
+    - 320.0
+    - 6.0
+    yaw_deg: 90.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-060
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 377.5
+    - 320.0
+    - 6.0
+    yaw_deg: 90.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-061
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 442.5
+    - 320.0
+    - 6.0
+    yaw_deg: 270.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-062
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 507.5
+    - 320.0
+    - 6.0
+    yaw_deg: 270.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-063
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 572.5
+    - 320.0
+    - 6.0
+    yaw_deg: 270.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-064
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 637.5
+    - 320.0
+    - 6.0
+    yaw_deg: 270.0
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-065
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 182.5
+    - 388.0
+    - 6.0
+    yaw_deg: 106.64
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-066
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 247.5
+    - 388.0
+    - 6.0
+    yaw_deg: 112.71
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-067
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 312.5
+    - 388.0
+    - 6.0
+    yaw_deg: 124.89
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-068
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 377.5
+    - 388.0
+    - 6.0
+    yaw_deg: 154.45
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-069
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 442.5
+    - 388.0
+    - 6.0
+    yaw_deg: 205.55
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-070
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 507.5
+    - 388.0
+    - 6.0
+    yaw_deg: 235.11
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-071
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 572.5
+    - 388.0
+    - 6.0
+    yaw_deg: 247.29
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-072
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 637.5
+    - 388.0
+    - 6.0
+    yaw_deg: 253.36
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-073
+  node: node-00
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 182.5
+    - 456.0
+    - 6.0
+    yaw_deg: 120.87
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-074
+  node: node-01
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 247.5
+    - 456.0
+    - 6.0
+    yaw_deg: 129.93
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-075
+  node: node-02
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 312.5
+    - 456.0
+    - 6.0
+    yaw_deg: 144.36
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-076
+  node: node-03
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 377.5
+    - 456.0
+    - 6.0
+    yaw_deg: 166.56
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-077
+  node: node-04
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 442.5
+    - 456.0
+    - 6.0
+    yaw_deg: 193.44
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-078
+  node: node-05
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 507.5
+    - 456.0
+    - 6.0
+    yaw_deg: 215.64
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-079
+  node: node-06
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 572.5
+    - 456.0
+    - 6.0
+    yaw_deg: 230.07
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: fixed-080
+  node: node-07
+  role: fixed
+  model: AXIS P3275-LVE
+  mount:
+    position_m:
+    - 637.5
+    - 456.0
+    - 6.0
+    yaw_deg: 239.13
+    pitch_deg: -10.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 1698.67
+    fy_px: 1698.67
+    cx_px: 1920.0
+    cy_px: 1080.0
+    width_px: 3840
+    height_px: 2160
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 97.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - overview
+  - pos-interior
+- id: ptz-001
+  node: node-00
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 688.8
+    - 320.0
+    - 9.0
+    yaw_deg: 270.0
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-002
+  node: node-01
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 675.15
+    - 387.24
+    - 9.0
+    yaw_deg: 255.77
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-003
+  node: node-02
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 635.55
+    - 447.9
+    - 9.0
+    yaw_deg: 240.44
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-004
+  node: node-03
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 573.87
+    - 496.04
+    - 9.0
+    yaw_deg: 222.95
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-005
+  node: node-04
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 496.15
+    - 526.95
+    - 9.0
+    yaw_deg: 202.6
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-006
+  node: node-05
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 410.0
+    - 537.6
+    - 9.0
+    yaw_deg: 180.0
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-007
+  node: node-06
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 323.85
+    - 526.95
+    - 9.0
+    yaw_deg: 157.4
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-008
+  node: node-07
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 246.13
+    - 496.04
+    - 9.0
+    yaw_deg: 137.05
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-009
+  node: node-00
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 184.45
+    - 447.9
+    - 9.0
+    yaw_deg: 119.56
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-010
+  node: node-01
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 144.85
+    - 387.24
+    - 9.0
+    yaw_deg: 104.23
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-011
+  node: node-02
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 131.2
+    - 320.0
+    - 9.0
+    yaw_deg: 90.0
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-012
+  node: node-03
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 144.85
+    - 252.76
+    - 9.0
+    yaw_deg: 75.77
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-013
+  node: node-04
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 184.45
+    - 192.1
+    - 9.0
+    yaw_deg: 60.44
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-014
+  node: node-05
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 246.13
+    - 143.96
+    - 9.0
+    yaw_deg: 42.95
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-015
+  node: node-06
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 323.85
+    - 113.05
+    - 9.0
+    yaw_deg: 22.6
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-016
+  node: node-07
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 410.0
+    - 102.4
+    - 9.0
+    yaw_deg: 0.0
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-017
+  node: node-00
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 496.15
+    - 113.05
+    - 9.0
+    yaw_deg: 337.4
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-018
+  node: node-01
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 573.87
+    - 143.96
+    - 9.0
+    yaw_deg: 317.05
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-019
+  node: node-02
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 635.55
+    - 192.1
+    - 9.0
+    yaw_deg: 299.56
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+- id: ptz-020
+  node: node-03
+  role: ptz
+  model: AXIS V5925
+  mount:
+    position_m:
+    - 675.15
+    - 252.76
+    - 9.0
+    yaw_deg: 284.23
+    pitch_deg: -6.0
+    roll_deg: 0.0
+  intrinsics:
+    fx_px: 960.0
+    fy_px: 960.0
+    cx_px: 960.0
+    cy_px: 540.0
+    width_px: 1920
+    height_px: 1080
+    distortion:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    hfov_deg: 90.0
+  horizon_y: null
+  enabled: true
+  tags:
+  - detail
+  - ptz
+  ptz:
+    enabled: true
+    pan_min_deg: -170.0
+    pan_max_deg: 170.0
+    tilt_min_deg: -90.0
+    tilt_max_deg: 90.0
+    zoom_min: 1.0
+    zoom_max: 30.0
+    max_pan_speed_deg_s: 30.0
+    max_tilt_speed_deg_s: 20.0
+    settle_time_s: 1.2
+    overshoot_ratio: 0.08
+protected_zones:
+- id: pz-substation-north
+  polygon:
+  - 120.0
+  - 430.0
+  - 260.0
+  - 430.0
+  - 260.0
+  - 540.0
+  - 120.0
+  - 540.0
+  priority: 10
+  height_m: 18.0
+  description: HV substation - highest-value asset on site
+- id: pz-tank-farm
+  polygon:
+  - 540.0
+  - 300.0
+  - 700.0
+  - 300.0
+  - 700.0
+  - 430.0
+  - 540.0
+  - 430.0
+  priority: 8
+  height_m: 14.0
+  description: Fuel tank farm
+- id: pz-control-building
+  polygon:
+  - 330.0
+  - 60.0
+  - 450.0
+  - 60.0
+  - 450.0
+  - 160.0
+  - 330.0
+  - 160.0
+  priority: 9
+  height_m: 12.0
+  description: Site control building
+- id: pz-perimeter-east
+  polygon:
+  - 740.0
+  - 100.0
+  - 810.0
+  - 100.0
+  - 810.0
+  - 560.0
+  - 740.0
+  - 560.0
+  priority: 6
+  height_m: 12.0
+  description: East perimeter - most common ingress vector
+- id: pz-approach-west
+  polygon:
+  - 10.0
+  - 180.0
+  - 90.0
+  - 180.0
+  - 90.0
+  - 480.0
+  - 10.0
+  - 480.0
+  priority: 7
+  height_m: 20.0
+  description: West approach corridor
+geofences:
+- id: gf-critical-infrastructure
+  polygon:
+  - 100.0
+  - 40.0
+  - 720.0
+  - 40.0
+  - 720.0
+  - 560.0
+  - 100.0
+  - 560.0
+  action: escalate
+  height_m: 0.0
+  description: Everything over the asset area escalates to critical
+- id: gf-no-fly-advisory
+  polygon:
+  - -120.0
+  - -120.0
+  - 940.0
+  - -120.0
+  - 940.0
+  - 760.0
+  - -120.0
+  - 760.0
+  action: alert
+  height_m: 0.0
+  description: Outer advisory ring
+- id: gf-tower-exclusion
+  polygon:
+  - 240.0
+  - 240.0
+  - 300.0
+  - 240.0
+  - 300.0
+  - 300.0
+  - 240.0
+  - 300.0
+  action: suppress
+  height_m: 60.0
+  description: Communications mast - structure-induced false positives
+overlap_zones: []
+notes: Generated by scripts/gen_coverage_map.py. 80 fixed + 20 PTZ across 8 worker nodes over a 820 x
+  640 m site. Intrinsics are derived from published fields of view, NOT from a calibration target, and
+  positions are synthetic. Replace both with survey data before trusting the coverage planner or the handoff
+  risk estimator. overlap_zones is empty on purpose - the runtime computes pairwise FOV intersection on
+  load and caches it.

@@ -1,0 +1,102 @@
+# ---------------------------------------------------------------------------
+# RT-DETR-x2 - the accuracy reference.
+#
+# Same data pipeline, same evaluator, same split files, same tracker. Only the
+# recipe differs, and it differs in exactly three places relative to yolo11n.yaml:
+#
+#   1. mosaic OFF. RT-DETR's hybrid encoder + denoising queries were designed
+#      for clean single-scale training; ultralytics' own RT-DETR fine-tuning
+#      recipe keeps mosaic at 0. Leaving it on costs accuracy and costs memory.
+#   2. lower base LR (0.0002 vs 0.01). RT-DETR is a transformer with AdamW; a
+#      nano-model SGD LR would either diverge or stall.
+#   3. short warmup (1 epoch). Fine-tuning from COCO, not training from scratch.
+#
+# 42.3 M params. This model is a measuring stick for what accuracy is available
+# in this data, not something you deploy on a Jetson.
+# ---------------------------------------------------------------------------
+name: rtdetr_x2
+family: rtdetr_x2
+base_weights: rtdetr-x2.pt
+
+epochs: 100
+imgsz: 640
+
+batch: -1
+batch_note: >-
+  -1 resolves to roughly 24-32 at 640 px on a 4090 and 16-24 on a 5090 once the
+  hybrid encoder activations are counted. Memory scales with the number of
+  denoising queries, so if you OOM, halve this before touching anything else.
+
+optimizer:
+  name: AdamW
+  lr0: 0.0002
+  lrf: 0.01
+  momentum: 0.9
+  weight_decay: 0.0001
+  warmup_epochs: 1.0
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.05
+
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.4            # slightly milder than YOLO; DETR's decoder is more brittle
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0
+  fliplr: 0.5
+  mosaic: 0.0           # <- difference #1
+  mixup: 0.0
+  cutout: 3
+  copy_paste: 0.0
+  close_mosaic: 0       # meaningless with mosaic off
+  ir_grayscale_probability: 0.15
+
+loss:
+  box: 7.5
+  cls: 2.0              # RT-DETR's classification loss is the focal variant
+  dfl: 1.5
+
+tiling:
+  enabled: false        # per-dataset, same rule as YOLO11n
+  tile_size: 640
+  overlap: 0.25
+  min_visibility: 0.35
+  random_offset: true
+
+patience: 40
+scheduler: cos-linear
+amp: true
+seed: 0
+workers: 4
+freeze: 0
+# The headline this run is judged on, recorded in run_metadata.json. NOT an
+# early-stopping selector: ultralytics early-stops on its internal `fitness`
+# blend, and `patience` above is what bounds that.
+metric: map50-95
+save_period: -1
+
+extra:
+  # RT-DETR is NMS-free: the decoder already produces a fixed, deduplicated set
+  # of queries. The tracker still needs plain xyxy boxes, which is why the
+  # predictor converts query outputs to boxes before association. Setting this
+  # false is what suppresses any attempt to run NMS over the query outputs.
+  nms: false
+  # Number of denoising queries during training. Lower = faster + less memory,
+  # and 100 is the value from the RT-DETR paper for COCO-scale data.
+  num_queries: 100
+
+notes: >-
+  Time expectation, RTX 5090, 640 px, ~90k untiled frames: ~2-3 h per combo for
+  100 epochs. With dvb or mmuav tiled the frame count multiplies by ~4-6, so
+  budget 8-15 h for the tiled combos and use artifacts/runs/*/last.pt with
+  --resume if you need to stop.
+
+  cutout and ir_grayscale_probability are applied by a project-owned callback,
+  not by ultralytics - see src/anti_uav/detection/augment.py.
+
+  If you want a fair accuracy headline on a budget, train rtdetr_x2 on `dvb` and
+  `all4` only, and let the full 7-combo sweep be a YOLO11n exercise.

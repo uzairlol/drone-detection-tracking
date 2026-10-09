@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------------
+# Volta profile - V100 (sm_70, 16/32 GB).
+#
+# Volta is the first architecture with fp16 tensor cores. It predates bf16, so
+# `amp=True` means fp16 only - which is correct and fast here. It used to be
+# folded into `pascal` on the reasoning that it was "the last line with fp16
+# tensor cores", which conflated having fp16 with having a *good* fp16 path.
+# Pascal (sm_61) has no tensor cores at all; Volta does.
+#
+# Not a target for this project, but it is a card people actually rent, and
+# silently forcing AMP off on a rented V100 is an expensive surprise.
+# ---------------------------------------------------------------------------
+profile: volta
+
+min_torch_cuda: "11.8"
+
+# torch.cuda.get_device_capability() -> (7, 0)
+target_capability: "7.0"
+
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: true
+force_batch: 32
+force_imgsz: 640
+workers: 4
+
+notes: >-
+  V100 16 GB. Same absolute-batch reasoning as the turing profile: a concrete
+  integer avoids the fractional-batch rejection under multi-GPU, and 32 is
+  divisible by 2 for DDP. V100 is fp16-only; do not pass --fp16 expecting bf16.

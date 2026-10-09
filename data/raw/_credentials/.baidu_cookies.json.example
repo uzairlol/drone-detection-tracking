@@ -1,0 +1,15 @@
+{
+  "_comment": "TEMPLATE ONLY - not a real credential. MM-UAV and Anti-UAV410 come from Baidu Pan, which has no API. You must export your logged-in browser session into a file named exactly `.baidu_cookies.json` in THIS directory (data/raw/_credentials/). It is gitignored - never commit it.",
+  "_workflow": [
+    "1. Log into pan.baidu.com in a browser.",
+    "2. anti-uav download --dataset mmuav --dry-run  -> prints the share link + extraction code.",
+    "3. Open the link, solve the captcha, start the transfer in the official client. Let it finish; throttling means retries.",
+    "4. Export the pan.baidu.com cookies from DevTools and save them here as .baidu_cookies.json",
+    "5. Re-run the pipeline with --skip-download so the frame index is built from what already landed."
+  ],
+  "_format": "A flat name/value map of cookie name -> cookie value, as exported from the browser's cookies view. The backend looks up BDUSS and STOKEN among them.",
+  "_verify": "anti-uav download --dataset mmuav --dry-run",
+  "BDUSS": "<your BDUSS cookie value>",
+  "STOKEN": "<your STOKEN cookie value>",
+  "PSTM": "<optional>"
+}

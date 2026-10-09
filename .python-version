@@ -1,0 +1,8 @@
+# Target interpreter for the anti-uav package.
+#
+# NOTE: this project deliberately does NOT create its own virtualenv. It reuses
+# an existing conda environment (see docs/COMMANDS.md -> "0. Environment").
+# 3.11 is the floor; 3.12 is fine. 3.13 is NOT supported because several
+# pinned transitive deps (lapx, opencv-python, ultralytics) still lack 3.13
+# wheels.
+3.11

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>anti-uav console</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header>
+  <h1>anti&#8209;uav <span class="version" id="version"></span></h1>
+  <nav>
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="runs">Runs</button>
+    <button data-tab="matrix">Matrix</button>
+    <button data-tab="datasets">Datasets</button>
+    <button data-tab="playground">Playground</button>
+    <button data-tab="rules">Rules</button>
+    <button data-tab="coverage">Coverage</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ---------------------------------------------------------------- -->
+  <section id="overview" class="tab active">
+    <div class="grid" id="health-cards"></div>
+    <h2>Environment</h2>
+    <pre id="health-detail" class="muted">loading...</pre>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section id="runs" class="tab">
+    <h2>Training runs</h2>
+    <div class="toolbar">
+      <label>Run <select id="run-select"><option value="">-</option></select></label>
+    </div>
+    <div id="runs-table"></div>
+    <div id="run-detail"></div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section id="matrix" class="tab">
+    <h2>Experiment matrix</h2>
+    <p class="note">
+      mAP is only comparable <em>within a combo</em>. A combo whose sources contain no
+      bird annotations has an unfalsifiable precision column - see the caveat under
+      each dataset.
+    </p>
+    <div id="matrix-table"></div>
+    <h3>Cross-dataset evaluation</h3>
+    <p class="note">
+      Scores a run on each source dataset separately, including ones it never trained on.
+      This is the table that answers "does it generalise to a new camera".
+    </p>
+    <div class="toolbar">
+      <label>Run <select id="cross-run-select"><option value="">-</option></select></label>
+      <button id="cross-load">Evaluate</button>
+    </div>
+    <div id="cross-table"></div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section id="datasets" class="tab">
+    <h2>Datasets</h2>
+    <div id="datasets-table"></div>
+    <h3>Statistics</h3>
+    <div class="toolbar">
+      <label>Dataset <select id="stats-select"><option value="">-</option></select></label>
+    </div>
+    <pre id="stats-detail" class="muted">select a dataset</pre>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section id="playground" class="tab">
+    <h2>Inference playground</h2>
+    <div class="toolbar">
+      <label>Run <select id="pg-run"><option value="">-</option></select></label>
+      <label>Combo <select id="pg-combo"></select></label>
+      <label>Sample <select id="pg-image"><option value="">-</option></select></label>
+      <label>Tracker
+        <select id="pg-tracker">
+          <option value="botsort">BoT-SORT</option>
+          <option value="bytetrack">ByteTrack</option>
+          <option value="sort">SORT</option>
+        </select>
+      </label>
+      <label>conf <input id="pg-conf" type="number" value="0.25" min="0" max="1" step="0.05"></label>
+      <button id="pg-run-btn">Run</button>
+    </div>
+    <div id="pg-result">
+      <p class="muted">pick a run and a sample, then press Run</p>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section id="rules" class="tab">
+    <h2>Drone rules</h2>
+    <div id="rules-problems"></div>
+    <div class="two-col">
+      <div>
+        <h3>Thresholds</h3>
+        <pre id="rules-json" class="scroll"></pre>
+      </div>
+      <div>
+        <h3>Why was this not alerted?</h3>
+        <p class="note">
+          Runs the real rule set against a hypothetical track, showing every gate.
+          A gate whose input is missing is reported as <em>skipped</em>, never as passing.
+        </p>
+        <div class="toolbar">
+          <label>conf <input id="re-conf" type="number" value="0.45" step="0.05" min="0" max="1"></label>
+          <label>hits <input id="re-hits" type="number" value="30" min="0"></label>
+          <label>duration <input id="re-dur" type="number" value="2.0" step="0.5" min="0"></label>
+          <label>camera <input id="re-cam" value="fixed-001" size="12"></label>
+          <label>global id <input id="re-gid" type="number" value="7" min="0"></label>
+          <label>speed <input id="re-speed" type="number" value="12" step="1" min="0"></label>
+        </div>
+        <button id="re-eval">Evaluate</button>
+        <div id="re-result"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section id="coverage" class="tab">
+    <h2>Camera coverage</h2>
+    <p class="note">
+      Section 3 of the system block diagram: 80 fixed + 20 PTZ across 8 worker nodes.
+      Intrinsics come from published fields of view, not a calibration target - replace
+      them before trusting the planner.
+    </p>
+    <div id="coverage-summary"></div>
+    <h3>Protected zones</h3>
+    <div id="zones-table"></div>
+  </section>
+</main>
+
+<footer>
+  <span class="muted">
+    Reads the pipeline's own output (runs, frame indexes, configs). No separate database.
+  </span>
+</footer>
+
+<script src="/static/vendor/chart.umd.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
