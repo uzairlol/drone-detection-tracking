@@ -81,7 +81,15 @@ class DownloadResult:
     dataset: str
     variant: str
     source: str
-    status: str  # completed | skipped | failed | needs_credentials
+    #: One of: completed | skipped | failed | needs_credentials | manual.
+    #:
+    #: ``needs_credentials`` and ``manual`` are deliberately distinct. They used to
+    #: be the same string, which made a source that is never going to be
+    #: automated report that you were missing a login - so the fix people reach
+    #: for is authenticating, repeatedly, against a source that has nothing to
+    #: authenticate with. ``manual`` means "a human fetches this, and you do not
+    #: need to".
+    status: str
     path: Path | None = None
     bytes_downloaded: int = 0
     sha256: str | None = None
@@ -461,9 +469,14 @@ class BaiduBackend(DownloadBackend):
 class ManualBackend(DownloadBackend):
     """A source we deliberately do not automate.
 
-    The Drone-vs-Bird challenge videos are distributed on request by the
-    organisers; the public GitHub repo carries annotations only. Reporting this
-    as a distinct status beats letting the command appear to succeed.
+    Some artefacts are reference material rather than training input - the
+    Drone-vs-Bird challenge videos are distributed on request by the organisers,
+    and the public repo carries annotations only. Reporting this as a distinct
+    status beats letting the command appear to succeed.
+
+    The status is ``manual``, not ``needs_credentials``. These have nothing to do
+    with each other: one means "you are not logged in", the other means "nobody
+    will ever download this automatically, and that is fine".
     """
 
     kind = SourceKind.MANUAL
@@ -473,12 +486,13 @@ class ManualBackend(DownloadBackend):
 
     def fetch(self, plan: DownloadPlan) -> DownloadResult:
         return DownloadResult(
-            plan.dataset, plan.variant, plan.source_label, "needs_credentials",
+            plan.dataset, plan.variant, plan.source_label, "manual",
             error=(
-                f"Manual acquisition required. {plan.notes}\n"
+                f"Reference material, not fetched. Nothing to do here.\n"
+                f"  Why        : {plan.notes}\n"
                 f"  Reference  : {plan.url}\n"
-                f"  Target     : {plan.destination}\n"
-                "  Then re-run: anti-uav download --dataset <alias> --skip-download"
+                f"  If you want it, place it at: {plan.destination}\n"
+                f"  Then re-run: anti-uav download --dataset {plan.dataset} --skip-download"
             ),
         )
 

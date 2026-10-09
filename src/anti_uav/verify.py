@@ -518,9 +518,20 @@ def run(*, profile: str | None = None, console: Any = None) -> int:
         try:
             resolved = GpuProfile(profile.lower())
         except ValueError as exc:
-            resolved = None
-            if console:
-                console.print(f"[red]unknown profile {profile!r}:[/] {exc}")
+            # Do NOT fall through to auto-detection here. A typo'd --profile used
+            # to print "unknown profile" and then verify the machine against the
+            # *detected* profile, exiting 0 - so the run it was meant to
+            # constrain quietly became a different run, and the one thing the
+            # caller was checking was never checked.
+            known = ", ".join(p.value for p in GpuProfile)
+            message = (
+                f"unknown profile {profile!r}: {exc}. Known profiles: {known}"
+            )
+            if console is None:
+                print(message, file=sys.stderr)
+            else:
+                console.print(f"[red]{message}[/]")
+            return 2
     else:
         resolved = None
 

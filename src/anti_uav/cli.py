@@ -77,6 +77,20 @@ def _emit_json(payload: Any) -> None:
     console.print_json(json.dumps(payload, default=str))
 
 
+#: Download status -> how it is rendered. Module level so the mapping is
+#: testable; an unmapped status falls back to the bare word, which reads as a
+#: bug rather than a state.
+_STATUS_STYLES: dict[str, str] = {
+    "completed": "[green]completed[/]",
+    "skipped": "[yellow]skipped[/]",
+    "needs_credentials": "[magenta]needs credentials[/]",
+    # Deliberately distinct from needs_credentials: nothing is missing and
+    # nothing is being asked of you. See ManualBackend.
+    "manual": "[dim]reference only[/]",
+    "failed": "[red]failed[/]",
+}
+
+
 def _comma_list(value: str | None) -> list[str]:
     """``--combos a,b`` or ``--combos all``."""
     if not value:
@@ -278,12 +292,7 @@ def download(
             max_sequences=max_sequences,
             modalities=modality_enum,
         ):
-            status = {
-                "completed": "[green]completed[/]",
-                "skipped": "[yellow]skipped[/]",
-                "needs_credentials": "[magenta]needs credentials[/]",
-                "failed": "[red]failed[/]",
-            }.get(result.status, result.status)
+            status = _STATUS_STYLES.get(result.status, result.status)
 
             console.print(f"\n[bold]{alias}[/] - {result.source}  {status}")
             plan = result.extras.get("plan")
