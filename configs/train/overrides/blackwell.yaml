@@ -23,6 +23,8 @@ force_amp: true
 # ultralytics rejects outright under multi-GPU. 128 matches the measured YOLO11n
 # figure below and is divisible by 2.
 force_batch: 128
+force_batch_by_model:
+  rtdetr_x2: 20
 force_imgsz: 640
 workers: 8
 

@@ -27,14 +27,26 @@ batch_scale: 1.0
 imgsz_scale: 1.0
 
 force_amp: true
+# 32 for YOLO11n (2.6 M params). RT-DETR-x2 is 42.3 M with a hybrid encoder and
+# 100 denoising queries, whose activations dominate memory - it halves. Both are
+# even so DDP leaves no rank idle.
 force_batch: 32
+force_batch_by_model:
+  rtdetr_x2: 16
 force_imgsz: 640
 workers: 2
 
 notes: >-
   Kaggle T4x2 and Colab T4. YOLO11n at batch 32 / 640 px with AMP is roughly
-  10-14 it/s per GPU; RT-DETR-x2 is roughly 0.6-1.0 s/it, so the T4 is a
-  YOLO11n box, not an RT-DETR one. Two GPUs under DDP give a real but sub-2x
-  speedup: at this dataset size the GPUs are not the bottleneck, the 4 CPU
-  cores decoding 640 px JPEG are. Expect 1.5-3 h for 120 epochs on the dvb
-  combo tiled-free (~17.9k frames).
+  10-14 it/s per GPU; RT-DETR-x2 is roughly 0.3-0.5 s/it at batch 32 across
+  both ranks, so the T4 handles both models, just at very different cost.
+
+  Two GPUs under DDP give a real but sub-2x speedup on YOLO11n, and closer to
+  1.8x on RT-DETR-x2 (a T4 at batch 16/rank is not saturated). Expect roughly
+  1.5-3 h for YOLO11n at 120 epochs and 4-6 h for RT-DETR-x2 at 100 epochs on
+  the dvb combo (~17.9k frames, 15.2k of them train). Both fit a single Kaggle
+  12 h session; together they leave little margin for a re-run.
+
+  If you OOM, halve the batch before touching anything else - memory here
+  scales with the hybrid encoder's activations and the denoising query count,
+  not with the backbone.

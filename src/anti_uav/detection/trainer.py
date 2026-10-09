@@ -155,15 +155,24 @@ def resolve_batch(recipe: TrainRecipe, override: ProfileOverride, *, device: str
 
     Precedence, highest first:
 
-    1. ``override.force_batch`` — an absolute value. This is what the constrained
-       profiles actually use, because an absolute number is the only thing that
-       can be reasoned about on a card nobody has measured yet.
+    0. ``override.force_batch_by_model[family]`` — an absolute value for one
+       specific model. Checked before the profile-wide batch because the two
+       families do not share a memory profile: RT-DETR-x2's hybrid encoder and
+       denoising queries cost far more activations than YOLO11n, so a single
+       per-profile number either starves the CNN or OOMs the transformer.
+    1. ``override.force_batch`` — an absolute value for everything else. This
+       is what the constrained profiles actually use, because an absolute
+       number is the only thing that can be reasoned about on a card nobody has
+       measured yet.
     2. ``recipe.batch * override.batch_scale`` — only meaningful when the recipe
        pins a batch. Both shipped recipes use ``-1`` (let ultralytics auto-fit),
        and auto-fit cannot be scaled from outside: ultralytics picks the value
        from free VRAM after it reads the card.
     3. ``-1`` — auto-fit.
     """
+    per_model = override.force_batch_by_model.get(str(recipe.family))
+    if per_model:
+        return per_model
     if override.force_batch:
         return override.force_batch
     if recipe.batch > 0:
@@ -237,29 +246,35 @@ def plan_run(
 def _estimate(
     family: str, epochs: int, imgsz: int, batch: int, amp: bool, profile: GpuProfile | str
 ) -> str:
-    """A deliberately rough wall-clock note. Never present it as a promise."""
+    """A deliberately rough wall-clock note. Never present it as a promise.
+
+    The table deliberately does NOT mention a batch size. Batch is already
+    printed on its own line above, and it varies per model on the same profile
+    (RT-DETR-x2 gets a smaller one than YOLO11n), so baking it into the rate
+    string would contradict the resolved plan the line sits under.
+    """
     profile_value = profile.value if isinstance(profile, GpuProfile) else str(profile)
     table = {
-        ("yolo11n", "blackwell"): "~4-8 it/s at batch 128",
-        ("yolo11n", "ada"): "~3-5 it/s at batch 96",
-        ("yolo11n", "ampere"): "~3-5 it/s at batch 96",
-        ("yolo11n", "turing"): "~10-14 it/s at batch 32 (per GPU; T4 is a small card)",
-        ("yolo11n", "volta"): "~8-12 it/s at batch 32",
-        ("yolo11n", "pascal"): "~4-6 it/s at batch 8 (AMP forced off; sm_61)",
-        ("yolo11n", "cpu"): "~0.3 it/s at batch 4",
-        ("rtdetr_x2", "blackwell"): "~1.2-2 s/it at batch 20",
-        ("rtdetr_x2", "ada"): "~1.5-2.5 s/it at batch 24",
-        ("rtdetr_x2", "ampere"): "~1.5-2.5 s/it at batch 24",
-        ("rtdetr_x2", "turing"): "~0.6-1.0 s/it at batch 32 - not a good T4 workload",
-        ("rtdetr_x2", "volta"): "~0.8-1.4 s/it at batch 32",
-        ("rtdetr_x2", "pascal"): "~2-4 s/it at batch 8 (AMP forced off; sm_61)",
+        ("yolo11n", "blackwell"): "~4-8 it/s",
+        ("yolo11n", "ada"): "~3-5 it/s",
+        ("yolo11n", "ampere"): "~3-5 it/s",
+        ("yolo11n", "turing"): "~10-14 it/s per GPU",
+        ("yolo11n", "volta"): "~8-12 it/s",
+        ("yolo11n", "pascal"): "~4-6 it/s (AMP forced off; sm_61)",
+        ("yolo11n", "cpu"): "~0.3 it/s",
+        ("rtdetr_x2", "blackwell"): "~1.2-2 s/it",
+        ("rtdetr_x2", "ada"): "~1.5-2.5 s/it",
+        ("rtdetr_x2", "ampere"): "~1.5-2.5 s/it",
+        ("rtdetr_x2", "turing"): "~0.3-0.5 s/it across 2 GPUs",
+        ("rtdetr_x2", "volta"): "~0.4-0.7 s/it",
+        ("rtdetr_x2", "pascal"): "~2-4 s/it (AMP forced off; sm_61)",
         ("rtdetr_x2", "cpu"): "~8-15 s/it - not worth running, use a GPU box",
     }
     rate = table.get((family, profile_value), "rate unknown for this profile")
     flag = "" if amp else ", AMP OFF"
-    size_note = f"at imgsz {imgsz}" if imgsz != 640 else ""
+    size_note = f" at imgsz {imgsz}" if imgsz != 640 else ""
     return (
-        f"{profile_value}: {rate} {size_note} -> {epochs} epochs{flag}. "
+        f"{profile_value}: {rate}{size_note} -> {epochs} epochs{flag}. "
         f"Multiply by the frame count printed by `anti-uav build`; tiled combos "
         f"(tiling on) are roughly 4-6x that. This is an order-of-magnitude guide, "
         f"not a measurement."

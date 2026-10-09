@@ -452,7 +452,18 @@ class ProfileOverride(_Strict):
     batch_scale: float = Field(default=1.0, gt=0.0, le=1.0)
     imgsz_scale: float = Field(default=1.0, gt=0.0, le=1.0)
     force_amp: bool | None = None
+    #: Absolute batch for every model on this GPU tier.
     force_batch: int | None = Field(default=None, ge=1)
+    #: Per-model absolute batch, overriding :attr:`force_batch`.
+    #:
+    #: One number per profile is not enough, because the two families in the
+    #: matrix do not have the same memory profile by anything like the same
+    #: factor. RT-DETR-x2's hybrid encoder keeps far more activations live than
+    #: YOLO11n's, and memory scales with the denoising query count on top of
+    #: that - so the batch that fits the CNN OOMs the transformer on the same
+    #: card. Without this, every operator has to rediscover the right number per
+    #: model and `matrix run` plans a run that dies at allocation.
+    force_batch_by_model: dict[str, int] = Field(default_factory=dict)
     force_imgsz: int | None = Field(default=None, ge=64)
     workers: int | None = Field(default=None, ge=0, le=32)
     notes: str = ""

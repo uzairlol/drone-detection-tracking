@@ -179,6 +179,38 @@ class TestGpuProfiles:
             f"two GPUs and would leave a rank idle"
         )
 
+    @pytest.mark.parametrize("profile", ["volta", "turing", "ampere", "ada", "blackwell"])
+    def test_per_model_batch_is_even_and_smaller_than_the_cnn(self, profile: str) -> None:
+        """RT-DETR-x2 must get a smaller, still-even batch than YOLO11n.
+
+        RT-DETR-x2 is 42.3 M params against YOLO11n's 2.6 M, and its hybrid
+        encoder plus 100 denoising queries keep far more activations live. One
+        batch number for both families either starves the CNN or OOMs the
+        transformer on the same card - which is why this is a config field
+        rather than something each operator rediscovers.
+        """
+        from anti_uav.config import load_profile_override
+
+        override = load_profile_override(profile)
+        det = override.force_batch_by_model.get("rtdetr_x2")
+        assert det is not None, f"{profile} gives RT-DETR-x2 no batch of its own"
+        assert det % 2 == 0, f"{profile} RT-DETR-x2 batch {det} is odd; DDP wastes a rank"
+        assert det <= override.force_batch, (
+            f"{profile} gives RT-DETR-x2 batch {det}, larger than YOLO11n's "
+            f"{override.force_batch}, but it is the heavier of the two"
+        )
+
+    @pytest.mark.parametrize("profile", ["turing", "ampere", "ada", "blackwell"])
+    def test_resolve_batch_honours_the_per_model_override(self, profile: str) -> None:
+        """``force_batch_by_model`` must beat the profile-wide batch."""
+        from anti_uav.config import load_profile_override, load_recipe
+        from anti_uav.detection.trainer import resolve_batch
+
+        override = load_profile_override(profile)
+        expected = override.force_batch_by_model["rtdetr_x2"]
+        assert resolve_batch(load_recipe("rtdetr_x2"), override, device="0,1") == expected
+        assert resolve_batch(load_recipe("yolo11n"), override, device="0,1") == override.force_batch
+
 
 class TestRules:
     def test_loads(self) -> None:

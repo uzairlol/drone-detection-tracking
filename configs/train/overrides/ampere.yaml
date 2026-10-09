@@ -20,6 +20,10 @@ force_amp: true
 # reads total VRAM rather than the free slice. 96 matches the measured figure
 # below and is divisible by 2.
 force_batch: 96
+# RT-DETR-x2's hybrid encoder + denoising queries dominate memory, so it needs
+# roughly a quarter of the CNN's batch. Both even, so DDP leaves no rank idle.
+force_batch_by_model:
+  rtdetr_x2: 24
 force_imgsz: 640
 workers: 8
 
