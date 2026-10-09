@@ -70,16 +70,27 @@ datasets:
           converter verifies this against the label histogram and fails loudly
           if the ratio is inverted.
 
-      - kind: http
+      # NOT `kind: http`. That was a bug: HttpBackend issues a plain GET, so a
+      # repo URL returns GitHub's HTML landing page. It saved 251 KB of
+      # `<!DOCTYPE html>` into data/raw/dvb/full/challenge and reported
+      # `completed` - a success message for zero annotations, plus a junk file in
+      # the dataset root. HttpBackend now also refuses an HTML response outright.
+      #
+      # This is a *reference* artefact for cross-checking the mirror's box
+      # coordinates, not a training input: the videos are distributed on request,
+      # so there is nothing here to train on. Fetch it by hand if you want it.
+      - kind: manual
         url: https://github.com/wosdetc/challenge
-        label: GitHub - official challenge annotations (no videos)
+        label: GitHub - official challenge annotations (reference only)
         approx_size_gb: 0.01
         needs_credentials: false
         notes: >-
-          Annotations only. Per-video .txt in the format
-          `<frame> <n> <x> <y> <w> <h> [x y w h ...]`. Useful for verifying the
-          Kaggle mirror's box coordinates, not as a standalone train source
-          because the videos are distributed on request.
+          Reference only - NOT fetched automatically. Per-video .txt in the
+          format `<frame> <n> <x> <y> <w> <h> [x y w h ...]`, useful for
+          verifying the Kaggle mirror's box coordinates. Not a training source:
+          the videos are distributed on request. Clone it by hand if you want to
+          cross-check, and do not put it in data/raw/dvb/full - it belongs
+          outside the dataset root so the converter cannot mistake it for input.
 
     ingest:
       stride: 2                   # 25-30 fps source; stride 2 still leaves

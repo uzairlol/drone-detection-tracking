@@ -16,6 +16,8 @@ readers, because the reader is exactly what these tests are meant to exercise.
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -379,3 +381,217 @@ class TestDownloadPlanning:
         assert any(r.status == "needs_credentials" for r in results), [
             r.status for r in results
         ]
+
+
+class TestKaggleCredentialGate:
+    """The gate must accept every credential the CLI actually accepts.
+
+    The CLI authenticates in a documented order, and this gate used to know only
+    three of those shapes. `KAGGLE_USERNAME` + `KAGGLE_KEY` - the pair Kaggle's
+    own UI hands you, and the pair a notebook receives from its Secrets panel -
+    was missing, so the gate refused a download that was about to succeed. The
+    failure mode is nasty because the message is confident and the CLI would
+    have worked.
+
+    Order matters as much as membership. The CLI reads its config file and then
+    overlays environment variables, so an env var beats a stale file; and it
+    tries access-token auth before the legacy API key.
+    """
+
+    @staticmethod
+    def _home(monkeypatch, tmp_path, *files: str) -> Path:
+        monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+        if files:
+            (tmp_path / ".kaggle").mkdir(parents=True, exist_ok=True)
+            for name in files:
+                (tmp_path / ".kaggle" / name).write_text("{}", encoding="utf-8")
+        return tmp_path
+
+    @staticmethod
+    def _clear(monkeypatch) -> None:
+        for key in list(os.environ):
+            if key.startswith("KAGGLE_"):
+                monkeypatch.delenv(key, raising=False)
+
+    def _source(self, monkeypatch, tmp_path, env, files=()) -> str:
+        from anti_uav.data.download.backends import KaggleBackend
+
+        self._clear(monkeypatch)
+        for key, value in env.items():
+            monkeypatch.setenv(key, value)
+        self._home(monkeypatch, tmp_path, *files)
+        return KaggleBackend().credential_source()
+
+    @pytest.mark.parametrize(
+        ("env", "files", "expected"),
+        [
+            ({}, (), ""),
+            ({"KAGGLE_API_TOKEN": "t"}, (), "KAGGLE_API_TOKEN"),
+            ({"KAGGLE_USERNAME": "u", "KAGGLE_KEY": "k"}, (), "KAGGLE_USERNAME + KAGGLE_KEY"),
+            # The notebook-proxy credential Kaggle sets for you inside a kernel.
+            ({"KAGGLE_API_V1_TOKEN": "v"}, (), "KAGGLE_API_V1_TOKEN (Kaggle notebook proxy)"),
+            ({}, ("access_token",), "~/.kaggle/access_token"),
+            ({}, ("access_token.txt",), "~/.kaggle/access_token.txt"),
+            ({}, ("kaggle.json",), "~/.kaggle/kaggle.json"),
+            # env overlays the file, so a fresh pair beats a stale kaggle.json
+            ({"KAGGLE_USERNAME": "u", "KAGGLE_KEY": "k"}, ("kaggle.json",), "KAGGLE_USERNAME + KAGGLE_KEY"),
+            # access-token auth is tried before the legacy key
+            ({"KAGGLE_USERNAME": "u", "KAGGLE_KEY": "k"}, ("access_token",), "~/.kaggle/access_token"),
+        ],
+    )
+    def test_accepts_and_ranks(self, monkeypatch, tmp_path, env, files, expected) -> None:
+        assert self._source(monkeypatch, tmp_path, env, files) == expected
+
+    @pytest.mark.parametrize("env", [{"KAGGLE_USERNAME": "u"}, {"KAGGLE_KEY": "k"}])
+    def test_half_a_legacy_pair_is_not_a_credential(self, monkeypatch, tmp_path, env) -> None:
+        """One half of the legacy pair is not a credential.
+
+        Reporting success here would hand the failure to the CLI as an opaque
+        401 instead of naming the missing half.
+        """
+        assert self._source(monkeypatch, tmp_path, env) == ""
+
+    def test_username_and_key_pair_is_the_notebook_documented_path(
+        self, monkeypatch, tmp_path
+    ) -> None:
+        """Guards the specific regression.
+
+        notebooks/kaggle_dvb.ipynb sets these two from `kaggle_secrets`. Before
+        this was fixed, following the notebook could not possibly work.
+        """
+        assert (
+            self._source(
+                monkeypatch, tmp_path, {"KAGGLE_USERNAME": "user", "KAGGLE_KEY": "key"}
+            )
+            == "KAGGLE_USERNAME + KAGGLE_KEY"
+        )
+
+    def test_message_names_every_accepted_shape(self, monkeypatch, tmp_path) -> None:
+        """A refusal that does not say what would work sends you hunting."""
+        from anti_uav.data.download.backends import KaggleBackend
+
+        self._clear(monkeypatch)
+        self._home(monkeypatch, tmp_path)
+        monkeypatch.setattr(shutil, "which", lambda _: "/usr/bin/kaggle")
+        ok, reason = KaggleBackend().available()
+        assert not ok
+        for shape in ("KAGGLE_API_TOKEN", "KAGGLE_USERNAME", "KAGGLE_KEY", "kaggle.json"):
+            assert shape in reason, f"{shape} missing from the refusal message"
+
+
+class TestHttpBackendRejectsWebPages:
+    """A repo URL returns the hosting site's HTML, not the artefact.
+
+    This shipped as a bug: the dvb registry declared the WOSDETC challenge repo
+    as `kind: http`, and HttpBackend issued a plain GET. It saved 251 KB of
+    `<!DOCTYPE html>` into `data/raw/dvb/full/challenge`, printed a sha256 for
+    it, and reported `completed`. Zero annotations, a junk file in the dataset
+    root, and a success message.
+    """
+
+    @staticmethod
+    def _plan(tmp_path, url: str):
+        from anti_uav.config.schema import SourceKind
+        from anti_uav.data.download.backends import DownloadPlan
+
+        return DownloadPlan(
+            dataset="dvb",
+            variant="full",
+            source_label="test",
+            kind=SourceKind.HTTP,
+            url=url,
+            destination=tmp_path / "raw",
+            approx_size_gb=0.001,
+            needs_credentials=False,
+        )
+
+    @staticmethod
+    def _fake_response(content_type: str, body: bytes):
+        class FakeResponse:
+            def __init__(self) -> None:
+                self.headers = {
+                    "content-type": content_type,
+                    "content-length": str(len(body)),
+                }
+                self._stream = iter([body])
+                self.raw = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def iter_content(self, chunk_size: int = 0):
+                return self._stream
+
+        return FakeResponse()
+
+    @pytest.mark.parametrize(
+        ("content_type", "body"),
+        [
+            ("text/html; charset=utf-8", b"<!DOCTYPE html><html><body>repo</body></html>"),
+            # A mirror that serves a page with a generic content-type still has
+            # to be caught, hence the body sniff.
+            ("application/octet-stream", b"<!DOCTYPE html>\n<html>...repo page...</html>"),
+            ("text/plain", b"<html><head><title>GitHub</title></head></html>"),
+        ],
+    )
+    def test_html_is_failed_and_nothing_is_written(
+        self, monkeypatch, tmp_path, content_type: str, body: bytes
+    ) -> None:
+        import requests
+
+        from anti_uav.data.download.backends import HttpBackend
+
+        monkeypatch.setattr(
+            requests, "get", lambda *a, **k: self._fake_response(content_type, body)
+        )
+
+        result = HttpBackend().fetch(self._plan(tmp_path, "https://example.invalid/repo"))
+
+        assert result.status == "failed", f"HTML was accepted: {result.status}"
+        assert "HTML" in (result.error or "")
+        assert not list((tmp_path / "raw").glob("*.part")), "partial file left behind"
+        assert not list((tmp_path / "raw").glob("repo*")), "junk file left in the dataset root"
+
+    def test_a_real_artefact_still_downloads(self, monkeypatch, tmp_path) -> None:
+        """The guard must not become a blanket refusal."""
+        import requests
+
+        from anti_uav.data.download.backends import HttpBackend
+
+        payload = b"PK\x03\x04" + b"\x00" * 2048  # a plausible archive header
+        monkeypatch.setattr(
+            requests, "get", lambda *a, **k: self._fake_response("application/zip", payload)
+        )
+
+        result = HttpBackend().fetch(self._plan(tmp_path, "https://example.invalid/data.zip"))
+
+        assert result.status == "completed", result.error
+        assert result.bytes_downloaded == len(payload)
+
+    def test_no_http_source_points_at_a_repository_url(self) -> None:
+        """Structural guard: an `http` source must be a file, not a page.
+
+        Catches the whole class, not just the instance we hit - a bare repo or
+        directory URL under `kind: http` is always a mistake, because HttpBackend
+        only knows how to GET a single file.
+        """
+        from anti_uav.config import load_registry
+
+        offenders: list[str] = []
+        for alias, spec in load_registry().datasets.items():
+            for source in spec.sources:
+                if source.kind.value != "http":
+                    continue
+                url = source.url.rstrip("/")
+                if url.count("/") < 3 or url.endswith(".git"):
+                    offenders.append(f"{alias}: {source.url} ({source.label})")
+        assert not offenders, (
+            "these http sources look like web pages or repositories, which return "
+            f"HTML rather than an artefact: {offenders}"
+        )

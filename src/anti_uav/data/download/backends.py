@@ -30,6 +30,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ...config.schema import DatasetSpec, DownloadSource, Modality, SourceKind
 from ...utils.io import dir_size_bytes, extract_any, human_bytes, require_free_space, sha256_file
@@ -170,39 +171,83 @@ class GitBackend(DownloadBackend):
 class KaggleBackend(DownloadBackend):
     """Kaggle CLI. Requires an accepted rules file, not just a token.
 
-    The CLI has accepted three different credential shapes over its lifetime and
-    the one you have depends on how old your account is. This backend gates on
-    all of them rather than only the original ``kaggle.json``, because the modern
-    CLI (2.x, shipping ``kagglesdk``) authenticates from ``KAGGLE_API_TOKEN`` or
-    ``~/.kaggle/access_token`` and will happily ignore a ``kaggle.json`` that is
-    present but stale. Gating on ``kaggle.json`` alone therefore reports
+    The CLI accepts several credential shapes and which one you have depends on
+    how old your account is and which SDK it ships. This backend gates on all of
+    them rather than a subset, because gating on the wrong subset reports
     "unauthenticated" on machines that are in fact perfectly able to download.
+
+    Read straight off ``kaggle.api.KaggleApi._load_config``, whose precedence is:
+
+    1. ``KAGGLE_API_TOKEN`` (a token, or a path to a file holding one)
+    2. ``~/.kaggle/access_token`` / ``.txt``
+    3. inside a Kaggle notebook, ``KAGGLE_API_V1_TOKEN`` via the data proxy
+    4. legacy API key: ``KAGGLE_USERNAME`` + ``KAGGLE_KEY``, or ``kaggle.json``
+    5. anonymous, for commands that allow it
+
+    Two of those were missing here and both bite in practice. ``KAGGLE_USERNAME``
+    and ``KAGGLE_KEY`` are the pair the Kaggle UI hands you and the pair a notebook
+    gets from its Secrets panel; the CLI folds every ``KAGGLE_*`` variable into
+    its config and authenticates from them, while this gate ignored them and
+    refused a download that was about to work. The notebook-proxy path matters
+    because that is the one credential a Kaggle kernel already has.
     """
 
     kind = SourceKind.KAGGLE
 
-    #: Checked in the CLI's own precedence order: explicit env var first, then
-    #: the two on-disk spellings. ``access_token.txt`` exists because Windows
-    #: users routinely add the extension.
-    _TOKEN_FILES = ("access_token", "access_token.txt", "kaggle.json")
+    def credential_source(self) -> str:
+        """Name the credential this machine has, or ``""`` if it has none.
+
+        Reporting *which* shape was found matters: "unauthenticated" on a box
+        where the CLI would have worked sends you looking in the wrong place.
+
+        The order mirrors the CLI, and it is not arbitrary. The CLI reads its
+        config file first and then overlays environment variables, so an env var
+        beats a file for the same key - and it tries access-token auth before the
+        legacy API key. Checking the files first would therefore report a stale
+        ``kaggle.json`` when a fresh ``KAGGLE_USERNAME``/``KAGGLE_KEY`` pair was
+        right there in the environment, which is the exact failure mode this
+        method exists to stop.
+        """
+        if os.environ.get("KAGGLE_API_TOKEN"):
+            return "KAGGLE_API_TOKEN"
+
+        kaggle_dir = Path.home().joinpath(".kaggle")
+        for name in ("access_token", "access_token.txt"):
+            if (kaggle_dir / name).is_file():
+                return f"~/.kaggle/{name}"
+
+        # Set by Kaggle itself inside a kernel; no user setup required.
+        if os.environ.get("KAGGLE_API_V1_TOKEN"):
+            return "KAGGLE_API_V1_TOKEN (Kaggle notebook proxy)"
+
+        # The CLI folds every KAGGLE_* variable into its config, so this pair is
+        # the legacy API-key credential and works from a notebook's Secrets panel.
+        if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
+            return "KAGGLE_USERNAME + KAGGLE_KEY"
+
+        if (kaggle_dir / "kaggle.json").is_file():
+            return "~/.kaggle/kaggle.json"
+
+        return ""
 
     def _credentials_present(self) -> bool:
-        if os.environ.get("KAGGLE_API_TOKEN"):
-            return True
-        kaggle_dir = Path.home().joinpath(".kaggle")
-        return any((kaggle_dir / name).is_file() for name in self._TOKEN_FILES)
+        return bool(self.credential_source())
 
     def available(self) -> tuple[bool, str]:
         if shutil.which("kaggle") is None:
             return False, "kaggle CLI not found - pip install 'anti-uav[download]'"
-        if self._credentials_present():
+        source = self.credential_source()
+        if source:
             return True, ""
         return False, (
-            "no Kaggle credentials found. Create a free account at kaggle.com, then "
-            "either run `kaggle login --accept-dictionary` (writes ~/.kaggle/kaggle.json) "
-            "or set KAGGLE_API_TOKEN / write ~/.kaggle/access_token. Note that Kaggle "
-            "also requires you to accept the dataset's rules in the browser before an "
-            "authenticated API call will return data."
+            "no Kaggle credentials found. Any ONE of these works:\n"
+            "    export KAGGLE_API_TOKEN=<token>            (Account > Settings > API)\n"
+            "    export KAGGLE_USERNAME=<user>              # legacy pair, both required\n"
+            "    export KAGGLE_KEY=<key>\n"
+            "    kaggle login --accept-dictionary            # writes ~/.kaggle/kaggle.json\n"
+            "Note that Kaggle also requires you to accept the dataset's rules in the "
+            "browser before an authenticated API call will return data; that step has "
+            "no API equivalent."
         )
 
     def fetch(self, plan: DownloadPlan) -> DownloadResult:
@@ -438,8 +483,32 @@ class ManualBackend(DownloadBackend):
         )
 
 
+def _looks_like_html(prefix: bytes) -> bool:
+    """Sniff a leading chunk for a doctype/``<html``, as a backstop.
+
+    Some mirrors serve a page with a generic content-type, so the header alone
+    is not enough. Takes bytes rather than the response, deliberately: an earlier
+    version pulled the first chunk from the response and then handed the same
+    iterator to the write loop, so a successful download wrote *nothing* after a
+    clean sniff. Peeking at bytes the caller already holds cannot do that.
+    """
+    if not prefix:
+        return False
+    stripped = prefix[:512].lstrip().lower()
+    return (
+        stripped.startswith(b"<!doctype html")
+        or stripped.startswith(b"<html")
+        or b"<html" in stripped[:256]
+    )
+
+
 class HttpBackend(DownloadBackend):
-    """Plain HTTP(S) with resume. No auth."""
+    """Plain HTTP(S) with resume. No auth.
+
+    For a single file at a stable URL - a tarball, an archive, a raw blob. NOT
+    for a repository or directory URL: those return the hosting site's HTML
+    landing page, which this backend now refuses rather than saving.
+    """
 
     kind = SourceKind.HTTP
 
@@ -470,11 +539,43 @@ class HttpBackend(DownloadBackend):
         try:
             with requests.get(plan.url, stream=True, timeout=60, allow_redirects=True) as response:
                 response.raise_for_status()
+
                 total = int(response.headers.get("content-length", 0))
                 mode = "ab" if part.exists() else "wb"
                 written = part.stat().st_size if mode == "ab" else 0
+
+                # Pull the first chunk before opening the file, so the HTML check
+                # runs before anything is written and the chunk is still ours to
+                # write if the payload turns out to be genuine.
+                chunks = response.iter_content(chunk_size=1 << 20)
+                first = next(chunks, b"")
+
+                # A repo or directory URL returns the hosting site's HTML landing
+                # page, not the artefact. Saving that and reporting `completed` is
+                # worse than failing: it is a success message for zero data, and
+                # the junk file lands in the dataset root where a converter may
+                # later mistake it for input.
+                content_type = response.headers.get("content-type", "").lower()
+                if "html" in content_type or _looks_like_html(first):
+                    part.unlink(missing_ok=True)
+                    return DownloadResult(
+                        plan.dataset, plan.variant, plan.source_label, "failed",
+                        duration_s=time.monotonic() - started,
+                        error=(
+                            f"{plan.url} returned an HTML page (content-type "
+                            f"{content_type or 'unset'}), not a downloadable artefact. "
+                            f"This URL is a web page or repository, not a file. If it is "
+                            f"a git repository, declare the source `kind: bitbucket` "
+                            f"(clones it) or `kind: manual` (for reference material). "
+                            f"Nothing was written."
+                        ),
+                    )
+
                 with part.open(mode) as handle:
-                    for chunk in response.iter_content(chunk_size=1 << 20):
+                    if first:
+                        handle.write(first)
+                        written += len(first)
+                    for chunk in chunks:
                         handle.write(chunk)
                         written += len(chunk)
         except Exception as exc:  # noqa: BLE001
