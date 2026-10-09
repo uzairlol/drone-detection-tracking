@@ -183,6 +183,38 @@ class TestSupportedPythonRange:
         assert PYTHON_MIN <= (3, 13) < PYTHON_MAX
 
 
+class TestVerifyEnvRejectsABadProfile:
+    """A typo'd ``--profile`` must not be silently downgraded to auto.
+
+    It used to print "unknown profile", then carry on and verify the machine
+    against the *detected* profile, exiting 0. So the profile you asked to be
+    checked was never checked, and any wrapper treating verify-env's exit code
+    as a gate - which is exactly what docs/COMMANDS.md tells people to do - saw
+    a pass.
+    """
+
+    def test_unknown_profile_exits_non_zero_without_verifying(self, capsys) -> None:
+        from anti_uav.verify import run
+
+        code = run(profile="definitely-not-a-profile", console=None)
+        assert code == 2, f"expected the bad-argument exit code, got {code}"
+
+        out = capsys.readouterr()
+        # It must bail out, not fall through and print an environment report.
+        assert "environment OK" not in out.out, "fell through to auto-detect"
+        assert "unknown profile" in out.err
+
+    def test_error_names_the_known_profiles(self, capsys) -> None:
+        from anti_uav.config.schema import GpuProfile
+        from anti_uav.verify import run
+
+        run(profile="nope", console=None)
+        err = capsys.readouterr().err
+        for known in ("turing", "pascal", "cpu"):
+            assert known in err, f"{known} missing from the error message"
+        assert GpuProfile.BLACKWELL.value in err
+
+
 class TestGpuProfiles:
     @pytest.mark.parametrize(
         "profile", ["pascal", "volta", "turing", "ampere", "ada", "blackwell", "cpu"]

@@ -479,6 +479,59 @@ class TestKaggleCredentialGate:
             assert shape in reason, f"{shape} missing from the refusal message"
 
 
+class TestManualSourceStatus:
+    """`manual` and `needs_credentials` must stay distinct statuses.
+
+    They were the same string. A reference source that will never be downloaded
+    automatically therefore reported that you were not logged in — and the
+    natural response to that message is to go and authenticate, repeatedly,
+    against a source that has nothing to authenticate with. The dvb GitHub
+    annotations entry is the case that exposed it.
+    """
+
+    def test_reference_source_reports_manual_not_credentials(self, tmp_path) -> None:
+        from anti_uav.config.schema import SourceKind
+        from anti_uav.data.download.backends import DownloadPlan, ManualBackend
+
+        plan = DownloadPlan(
+            dataset="dvb",
+            variant="full",
+            source_label="reference",
+            kind=SourceKind.MANUAL,
+            url="https://example.invalid/repo",
+            destination=tmp_path,
+            approx_size_gb=0.01,
+            needs_credentials=False,
+        )
+        result = ManualBackend().fetch(plan)
+
+        assert result.status == "manual", f"got {result.status!r}"
+        assert "needs_credentials" not in result.error
+        # The message must not send you off to authenticate.
+        assert "credential" not in result.error.lower()
+
+    def test_every_source_kind_has_a_distinct_status(self) -> None:
+        """A source blocked by a missing login still says so.
+
+        The counterpart to the test above: splitting the statuses is only
+        meaningful if the genuine credential case still reports a credential
+        problem. Baidu needs a BDUSS cookie, so it must remain
+        `needs_credentials`.
+        """
+        from anti_uav.data.download.backends import BaiduBackend
+
+        ok, reason = BaiduBackend().available()
+        assert not ok
+        assert "cookie" in reason.lower() or "BDUSS" in reason
+
+    def test_cli_renders_manual_status(self) -> None:
+        """An unmapped status would print as a bare word with no colour cue."""
+        from anti_uav.cli import _STATUS_STYLES
+
+        assert "manual" in _STATUS_STYLES
+        assert _STATUS_STYLES["manual"] != _STATUS_STYLES["needs_credentials"]
+
+
 class TestHttpBackendRejectsWebPages:
     """A repo URL returns the hosting site's HTML, not the artefact.
 
