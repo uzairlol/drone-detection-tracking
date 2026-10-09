@@ -1,0 +1,33 @@
+# Normalise line endings in the repository, not in the working tree.
+#
+# This repo is edited on Windows and executed on Linux (Kaggle). Without this,
+# git's core.autocrlf rewrites LF -> CRLF on checkout on Windows and the Kaggle
+# clone gets whatever the last committer happened to use. DeepStream .cfg files
+# and the PowerShell scripts in scripts/ are both sensitive to that.
+* text=auto eol=lf
+
+# Binary. Never line-ending translated, never diffed as text.
+*.pt binary
+*.pth binary
+*.onnx binary
+*.engine binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.mp4 binary
+*.avi binary
+*.zip binary
+*.gz binary
+
+# The vendored chart bundle is generated; keep it out of diffs and language stats.
+src/anti_uav/ui/static/vendor/*.js linguist-vendored
+
+# Notebook checkpoints are execution state, never source.
+.ipynb_checkpoints/** binary
+
+# Lockfiles are generated but must never be auto-merged - a merge that "resolves"
+# a lock is a lock that is wrong.
+requirements-lock.txt linguist-generated

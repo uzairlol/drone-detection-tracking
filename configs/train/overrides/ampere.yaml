@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# Ampere profile - RTX 3090 / 4090 (sm_86 / sm_89).
+#
+# The straightforward case: standard fp16 tensor cores, AMP on, plenty of VRAM.
+# This is the profile the experiment matrix was sized for.
+# ---------------------------------------------------------------------------
+profile: ampere
+
+min_torch_cuda: "12.1"
+target_capability: "8.6"
+
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: true
+# -1 in the recipes means "let ultralytics auto-detect", and auto-detect resolves
+# to a FRACTION of free VRAM - which ultralytics then rejects outright when
+# more than one GPU is present ("AutoBatch with batch<1 not supported for
+# Multi-GPU"). A concrete integer also survives a shared box, where auto-detect
+# reads total VRAM rather than the free slice. 96 matches the measured figure
+# below and is divisible by 2.
+force_batch: 96
+force_imgsz: 640
+workers: 8
+
+notes: >-
+  RTX 3090 (24 GB) and 4090 (24 GB) both fit YOLO11n at batch ~96 and
+  RT-DETR-x2 at batch ~24 with AMP. Run the full 7-combo sweep here.

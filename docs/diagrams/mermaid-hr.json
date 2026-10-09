@@ -1,0 +1,13 @@
+{
+  "themeVariables": {
+    "fontSize": "22px"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 60,
+    "rankSpacing": 70,
+    "padding": 16,
+    "useMaxWidth": false
+  }
+}

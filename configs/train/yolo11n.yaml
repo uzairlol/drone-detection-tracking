@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------------------
+# YOLO11n - the edge candidate from the system block diagram.
+#
+# The block diagram puts YOLO11n FP16 behind nvinfer on each DeepStream worker
+# node with a ~3 ms budget on Jetson AGX Thor. Everything in this file is chosen
+# to keep that budget reachable:
+#   * nano backbone - 2.6 M params, the smallest thing that holds up on 12 px
+#     targets without going to a bigger box
+#   * 640 px input, no tiling by default
+#   * heavy augmentation, because four heterogeneous sources is a lot of variance
+#
+# Tiling is applied per dataset at build time (see configs/matrix.yaml), not here.
+# ---------------------------------------------------------------------------
+name: yolo11n
+family: yolo11n
+base_weights: yolo11n.pt
+
+epochs: 120
+imgsz: 640
+
+# -1 lets ultralytics pick from free VRAM. The profile overrides clamp this,
+# because auto-detect on a shared 8 GB card will happily pick a batch that
+# collides with whatever else is running.
+batch: -1
+batch_note: >-
+  Auto (-1) on a dedicated 4090/5090 resolves to roughly 96-160 at 640 px.
+  The pascal override clamps to 8 and the cpu override to 4.
+
+optimizer:
+  name: auto            # ultralytics picks AdamW for the small nano models
+  lr0: 0.01
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0          # a drone never appears rotated; no benefit
+  translate: 0.1
+  scale: 0.5
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0           # sky is up. Vertical flip is unphysical.
+  fliplr: 0.5           # a drone crossing left-to-right is symmetric enough
+  mosaic: 1.0
+  mixup: 0.0            # mosaic already does the composition work
+  cutout: 6             # birds and clouds are the false-positive source
+  copy_paste: 0.0
+  close_mosaic: 15      # settle on single-scale inputs for the last 15 epochs
+  # Applies when the combo mixes visible RGB with thermal IR (dvb+mavvid+antiuav
+  # and all4). Randomly desaturating stops the backbone keying on palette.
+  ir_grayscale_probability: 0.15
+
+loss:
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+
+# Default off: tiling is switched on per dataset by configs/matrix.yaml when a
+# source's median target is <= 40 px.
+tiling:
+  enabled: false
+  tile_size: 640
+  overlap: 0.25
+  min_visibility: 0.35
+  random_offset: true
+
+patience: 50
+scheduler: cos-linear
+amp: true
+seed: 0
+workers: 4
+freeze: 0
+# The headline this run is judged on, recorded in run_metadata.json. NOT an
+# early-stopping selector: ultralytics early-stops on its internal `fitness`
+# blend, and `patience` above is what bounds that. mAP50-95 rather than mAP50
+# because at a 12-28 px target, mAP50 is very generous - a detector that puts a
+# loose box on the right patch scores well.
+metric: map50-95
+save_period: -1
+
+extra:
+  # Real NMS boxes, because the tracker associates against deduplicated boxes.
+  # Applied by default for YOLO; set explicitly so the intent is recorded rather
+  # than inherited. rtdetr_x2.yaml sets this false - its decoder is already
+  # deduplicated.
+  nms: true
+
+notes: >-
+  cutout and ir_grayscale_probability are NOT ultralytics knobs - the installed
+  version dropped `cutout`, and albumentations (the only other route) is an
+  optional extra this project does not depend on. Both are applied by a
+  project-owned callback on `on_train_batch_start`; see
+  src/anti_uav/detection/augment.py.
+
+  If you only have time for two runs, run `yolo11n` on `dvb` and on `all4`. dvb
+  tells you whether bird suppression works; all4 tells you whether the
+  combination is worth deploying.

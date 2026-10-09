@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# Pascal profile - your GTX 1070 (sm_61, 8 GB).
+#
+# WHY THIS PROFILE EXISTS: CUDA 12.8 removed Maxwell/Pascal kernels and CUDA 13.x
+# removed them outright, so a default `pip install torch` today installs a wheel
+# that cannot run on this card at all ("no kernel image is available for
+# execution on the device"). The fix is to pin the last build line that still
+# ships sm_61 cubins: torch 2.6.x + cu126. `scripts/verify_env.py` asserts that
+# sm_61 is present before any training starts.
+#
+# AMP is forced OFF. Pascal has no fp16 arithmetic path worth the name - every
+# fp16 op is emulated or demoted to fp32, so you pay the casting cost with none
+# of the throughput, and grad scaler instability shows up as silent mAP loss.
+# ---------------------------------------------------------------------------
+profile: pascal
+
+# Pascal support was deleted from CUDA 12.8 and 13.x. cu126 is the newest line
+# that still contains sm_61.
+min_torch_cuda: "12.6"
+
+# torch.cuda.get_device_capability() -> (6, 1)
+target_capability: "6.1"
+
+# batch_scale multiplies a batch the RECIPE pins. Both shipped recipes use -1
+# ("auto"), which ultralytics resolves from free VRAM after it reads the card and
+# which therefore cannot be scaled from here - so force_batch below is what
+# actually governs this profile, and batch_scale is left at 1.0 to say so rather
+# than to imply otherwise.
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: false
+# An absolute value, not a scale: nobody has measured this card, and 8 is a
+# number that can be reasoned about. `anti-uav matrix list` prints the resolved
+# batch per run so two boxes are never compared silently.
+force_batch: 8
+force_imgsz: 640
+workers: 2
+
+notes: >-
+  Development and smoke-test box. The 8 GB card trains, but a 14-run sweep here
+  would take weeks - use it for pipeline validation and single-dataset
+  experiments, then run the matrix on the department's 4090/5090.
+
+  Expect roughly 4-6 it/s for YOLO11n at batch 8 / 640 px without AMP, and
+  roughly 1.2-2 s/it for RT-DETR-x2 at batch 8 - i.e. one RT-DETR epoch over
+  90k frames is several hours. Plan tiled combos on a rented GPU or the lab box.

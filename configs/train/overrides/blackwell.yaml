@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# Blackwell profile - RTX 5090 (sm_120).
+#
+# The one hard constraint: sm_120 kernels first shipped in CUDA 12.8. A cu126
+# wheel (the one you need for the Pascal box) will NOT run on a 5090, and a
+# cu128 wheel will not run on the GTX 1070. That is why the environment is
+# profile-pinned rather than "install torch and hope" - the two machines are
+# genuinely incompatible on the CUDA axis.
+#
+# Verify before you train:
+#   uv run anti-uav verify-env
+# ---------------------------------------------------------------------------
+profile: blackwell
+
+min_torch_cuda: "12.8"
+target_capability: "12.0"
+
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: true
+# Concrete, not AutoBatch (-1): auto-detect yields a FRACTION of free VRAM, which
+# ultralytics rejects outright under multi-GPU. 128 matches the measured YOLO11n
+# figure below and is divisible by 2.
+force_batch: 128
+force_imgsz: 640
+workers: 8
+
+notes: >-
+  RT-DETR-x2 at batch ~20 and YOLO11n at batch ~128, both with AMP, at 640 px.
+  Tiled combos (dvb, mmuav, dvb+mavvid, dvb+mavvid+antiuav, all4) multiply the
+  frame count by roughly 4-6x, so budget accordingly.
+
+  If `verify-env` reports sm_120 missing, your torch wheel is too old. Fix with:
+    pip install --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu128

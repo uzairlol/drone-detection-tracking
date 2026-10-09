@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Runtime settings. Almost every field has an environment override, because the
+# same checkout runs on the GTX 1070 dev box and the department's RTX 5090:
+#
+#   ANTI_UAV_APP__DEVICE=cuda:0
+#   ANTI_UAV_APP__IMGSZ=1024
+#   ANTI_UAV_APP__LOG_JSON=1
+#
+# Section name comes from the parent directory, hence APP.
+# ---------------------------------------------------------------------------
+
+# auto | pascal | ampere | ada | blackwell | cpu
+# Leave as `auto` unless you need to pin it: `detect_profile()` reads the live
+# torch build and the device's compute capability, which is more reliable than
+# anyone remembering to set a variable on the right machine.
+profile: auto
+
+# auto | cpu | cuda | cuda:0 | cuda:0,1
+device: auto
+
+seed: 0
+
+imgsz: 640
+
+# Inference thresholds. Deliberately well below the rule layer's
+# confidence.initiate (0.60): the tracker needs a low bar to hold a track
+# through the dips, and the rule layer is what actually promotes a track to an
+# alert. Raising this to 0.60 would starve the tracker.
+conf_threshold: 0.25
+iou_threshold: 0.70
+
+max_detections: 100
+
+# FP16 export. Keep false on the Pascal profile - Pascal has no usable fp16
+# arithmetic path, so an FP16 engine is both slower and less accurate there.
+half: false
+
+log_level: INFO
+log_json: false
+
+api_host: 127.0.0.1
+api_port: 8000
+
+registry_db: artifacts/registry.sqlite3
+
+# BoT-SORT fuses appearance, which matters when a drone crosses a bird and IoU
+# association alone would swap identities. See tracking/metrics.py for why that
+# is the tracker we compare against.
+default_tracker: botsort
+
+# TensorRT engine build workspace. 4 GB is comfortable on a 24 GB card; drop to
+# 2 GB on the 8 GB dev box if the engine build OOMs.
+tensorrt_workspace_gb: 4.0
+
+notes: >-
+  The single most important line in this file is conf_threshold. It is NOT the
+  alerting threshold - see rules.confidence.initiate in configs/rules/drone_rules.yaml,
+  which is. Detection here is deliberately permissive so the tracker can keep a
+  track alive through a low-confidence stretch; the rule layer does the
+  deciding.

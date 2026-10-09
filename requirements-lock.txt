@@ -1,0 +1,193 @@
+# ---------------------------------------------------------------------------
+# anti-uav - known-good dependency snapshot
+# ---------------------------------------------------------------------------
+# Generated from a working environment on Windows / Python 3.11 / CUDA 12.6, and
+# verified against the test suite (213 tests), `ruff`, `mypy` and
+# `anti-uav verify-env`. It is a snapshot, not a constraint set: it pins the
+# resolution that is known to work, so a new machine reproduces it instead of
+# re-resolving against whatever PyPI serves tomorrow.
+#
+# Install with:
+#     pip install -r requirements-lock.txt
+#     pip install -e .                 # the project itself, unpinned on purpose
+#
+# scripts\setup_env.ps1 does both, in the right order:
+#     .\scripts\setup_env.ps1 -Profile pascal -UseLockFile -UpgradeTorch
+#
+# ---------------------------------------------------------------------------
+# torch and torchvision are deliberately ABSENT
+# ---------------------------------------------------------------------------
+# One lock cannot pin five GPU tiers. And a wrong torch build does not fail at
+# install time - it imports cleanly, reports CUDA as available, and then dies
+# hours into training with "no kernel image is available for execution on the
+# device". So torch is installed per machine, and `anti-uav verify-env` checks
+# the result against the GPU's actual compute capability before you spend any
+# GPU hours.
+#
+#   profile    GPU              needs           index
+#   --------   --------------   ------------    ------------------------------------
+#   pascal     GTX 1070 sm_61   torch 2.6 cu126  https://download.pytorch.org/whl/cu126
+#   volta      V100 sm_70       torch 2.x cu126  https://download.pytorch.org/whl/cu126
+#   turing     T4 sm_75         torch 2.x cu126  https://download.pytorch.org/whl/cu126
+#   ampere     RTX 3090 sm_86   torch 2.x cu124  https://download.pytorch.org/whl/cu124
+#   ada        RTX 4090 sm_89   torch 2.x cu128  https://download.pytorch.org/whl/cu128
+#   blackwell  RTX 5090 sm_120  torch 2.x cu128  https://download.pytorch.org/whl/cu128
+#   cpu        none             any              (default PyPI wheel)
+#
+# CUDA 12.8 removed Maxwell and Pascal outright, which is why pascal needs an
+# older torch AND an older CUDA line, not just an older torch. 12.6 is the
+# newest runtime that still carries sm_61 kernels. CUDA 13.x removed Volta too,
+# so volta must stay on a 12.x line.
+#
+# --- PLATFORM SCOPE: Windows / cp311 only -------------------------------------
+# The snapshot below was taken on Windows and verified only there. Three of its
+# pins do not transfer to Linux and will FAIL or downgrade a Kaggle/Colab image:
+#
+#   lapx 0.10.0   ships manylinux AND win_amd64 wheels, so this one is fine.
+#                 (The Windows-only spelling that trips people up is `lap`, not
+#                 `lapx` - `lap` is Windows-only, `lapx` is the portable one.)
+#   numpy         pinned to whatever the Windows box resolved. Re-pinning numpy
+#                 against Kaggle's preinstalled torch is a reliable way to break
+#                 CUDA; let the image keep its own numpy.
+#   opencv-python Kaggle images ship `opencv-python-headless`. Installing the
+#                 GUI build on top shadows it and can break `import cv2` for
+#                 missing GUI system libraries.
+#
+# So: do NOT install this file on Kaggle. Install the project with its extras
+# and let the image's torch/numpy/opencv stand:
+#
+#     uv pip install --system -e ".[train]"
+#
+# notebooks/kaggle_dvb.ipynb is written to do exactly that.
+#
+# If you have a local wheel - this repo's Pascal box uses
+# D:\wheels\torch-<version>+cu126-cp311-cp311-win_amd64.whl - install it with
+#     pip install <path-to-wheel>
+# rather than from an index. A local wheel is how a cu126 build survives on a
+# card whose driver predates that runtime.
+#
+# No hashes are recorded. Hash pinning needs a network round-trip per artifact
+# and breaks the moment a mirror rotates a file; version pins plus `verify-env`
+# are the cheaper guarantee.
+#
+# Regenerate after an intentional upgrade:
+#     pip install -e ".[all]"
+#     pip freeze --all        # then filter out pip, torch, torchvision, anti-uav
+# ---------------------------------------------------------------------------
+
+# --- verified-good snapshot -------------------------------------------------
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+ast_serialize==0.11.2
+attrs==26.1.0
+beautifulsoup4==4.15.0
+bleach==6.4.0
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.2
+click==8.5.0
+cloudpickle==3.1.2
+colorama==0.4.6
+contourpy==1.3.3
+coverage==7.16.2
+cryptography==50.0.2
+cycler==0.12.1
+fastapi==0.142.2
+fastjsonschema==2.22.2
+filelock==4.0.9
+flatbuffers==25.12.19
+fonttools==4.66.1
+fsspec==2026.9.0
+gdown==6.4.1
+h11==0.16.0
+hf-xet==1.6.0
+httpcore==1.0.9
+httpcore2==2.13.1
+httptools==0.8.0
+httpx==0.28.1
+httpx2==2.13.1
+huggingface_hub==2.1.1
+idna==3.20
+iniconfig==2.3.0
+Jinja2==3.1.6
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+jupyter_core==5.9.1
+jupytext==1.19.5
+kaggle==2.2.4
+kagglesdk==0.1.37
+kiwisolver==1.5.1
+lapx==0.10.0
+librt==0.16.0
+markdown-it-py==4.2.0
+MarkupSafe==3.0.3
+matplotlib==3.11.2
+mdit-py-plugins==0.6.1
+mdurl==0.1.2
+ml_dtypes==0.6.0
+modelscope==1.40.1
+modelscope-hub==0.4.5
+mpmath==1.3.0
+mypy==2.4.0
+mypy_extensions==1.1.0
+nbformat==5.11.1
+networkx==3.6.1
+numpy==2.4.6
+nvidia-ml-py==13.615.71
+onnx==1.23.1
+onnxruntime==1.30.0
+opencv-python==5.0.0.93
+opentelemetry-api==1.45.0
+packaging==26.3
+pandas==3.0.6
+pathspec==1.1.1
+pillow==12.3.0
+platformdirs==4.12.2
+pluggy==1.6.0
+polars==1.44.2
+polars-runtime-32==1.44.2
+protobuf==7.36.2
+psutil==7.2.2
+pycparser==3.0
+pydantic==2.13.5
+pydantic_core==2.46.5
+Pygments==2.21.0
+pyparsing==3.3.3
+PySocks==1.7.1
+pytest==9.1.1
+pytest-cov==7.1.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.4
+python-multipart==0.0.32
+python-slugify==9.1.2
+PyYAML==6.0.3
+referencing==0.37.0
+requests==2.34.2
+rich==15.0.0
+rpds-py==2026.6.3
+ruff==0.16.10
+scipy==1.17.1
+setuptools==83.0.0
+shellingham==1.5.4
+six==1.17.0
+soupsieve==2.10
+starlette==1.7.0
+sympy==1.14.0
+text-unidecode==1.3
+tqdm==4.70.1
+traitlets==5.16.1
+truststore==0.10.4
+typer==0.27.2
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+tzdata==2026.4
+ultralytics==8.4.171
+ultralytics-platform==0.1.75
+ultralytics-thop==2.2.2
+urllib3==2.8.0
+uvicorn==0.54.0
+watchfiles==1.3.0
+webencodings==0.6.1
+websockets==17.1
+wheel==0.47.0

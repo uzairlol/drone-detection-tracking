@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# CPU profile - the default dev environment.
+#
+# The `ml` conda env this repo reuses ships torch 2.13.0+cpu. Everything that
+# does not need a GPU works there: download, ingest, convert, split, stats,
+# the API, the UI and the whole test suite. Training and GPU inference do not -
+# `anti-uav train` refuses to start on this profile rather than spending hours
+# to produce a useless CPU-trained checkpoint.
+# ---------------------------------------------------------------------------
+profile: cpu
+
+min_torch_cuda: ""
+target_capability: ""
+
+batch_scale: 1.0
+imgsz_scale: 1.0
+
+force_amp: false
+force_batch: 4
+force_imgsz: 640
+workers: 0
+
+notes: >-
+  workers=0 is required on Windows: DataLoader worker processes use fork-style
+  multiprocessing that the Windows spawn implementation handles badly, and the
+  default 4 workers reliably hangs a CPU smoke test.
+
+  A 3-epoch YOLO11n CPU run over ~2000 frames is a legitimate pipeline check
+  (~20-40 min). RT-DETR-x2 on CPU is not worth attempting - use the GPU boxes.
