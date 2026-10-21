@@ -35,6 +35,7 @@ class SourceKind(StrEnum):
     GDRIVE = "gdrive"
     KAGGLE = "kaggle"
     BITBUCKET = "bitbucket"
+    GITHUB = "github"
     MODELSCOPE = "modelscope"
     BAIDU = "baidu"
     HF = "hf"

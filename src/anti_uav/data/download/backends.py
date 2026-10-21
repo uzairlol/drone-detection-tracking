@@ -652,6 +652,64 @@ class ModelScopeBackend(DownloadBackend):
         )
 
 
+class HfBackend(DownloadBackend):
+    """HuggingFace Hub. A dataset repo id, no auth for public datasets.
+
+    ``kind: hf`` takes the repo id (``owner/name``), not a URL. The hub's
+    resolver is a git-based endpoint with LFS pointers, so a plain HTTP GET of
+    ``https://huggingface.co/datasets/<id>`` returns the *landing page* - HTML,
+    not the payload. That is the same failure mode as the GitHub-in-``http``
+    bug, so the snapshot API is used instead of a direct download.
+    """
+
+    kind = SourceKind.HF
+
+    def available(self) -> tuple[bool, str]:
+        try:
+            import huggingface_hub  # noqa: F401
+        except ImportError:
+            return False, "huggingface_hub not installed - pip install 'anti-uav[download]'"
+        return True, ""
+
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
+        started = time.monotonic()
+        reporter = progress or NullProgress()
+        plan.destination.mkdir(parents=True, exist_ok=True)
+        try:
+            from huggingface_hub import snapshot_download
+        except ImportError as exc:
+            return DownloadResult(
+                plan.dataset, plan.variant, plan.source_label, "failed",
+                duration_s=time.monotonic() - started, error=str(exc),
+            )
+
+        log.info("huggingface snapshot", extra={"dataset": plan.dataset, "repo": plan.url})
+        reporter.begin(f"huggingface {plan.dataset}")
+        try:
+            path = snapshot_download(
+                plan.url,
+                repo_type="dataset",
+                local_dir=str(plan.destination),
+            )
+        except Exception as exc:  # noqa: BLE001
+            reporter.end(description=f"huggingface {plan.dataset}", detail="failed")
+            return DownloadResult(
+                plan.dataset, plan.variant, plan.source_label, "failed",
+                duration_s=time.monotonic() - started,
+                error=f"{type(exc).__name__}: {exc}",
+            )
+
+        size = dir_size_bytes(path)
+        reporter.end(description=f"huggingface {plan.dataset}", detail=human_bytes(size))
+        return DownloadResult(
+            plan.dataset, plan.variant, plan.source_label, "completed",
+            path=Path(path), bytes_downloaded=size,
+            duration_s=time.monotonic() - started,
+        )
+
+
 class BaiduBackend(DownloadBackend):
     """Baidu Pan.
 
@@ -888,13 +946,16 @@ class HttpBackend(DownloadBackend):
 
 _BACKENDS: dict[SourceKind, type[DownloadBackend]] = {
     SourceKind.BITBUCKET: GitBackend,
+    # GitHub is the same shallow-clone transport as Bitbucket; the kind is kept
+    # separate so a registry entry reads as what it actually is.
+    SourceKind.GITHUB: GitBackend,
     SourceKind.KAGGLE: KaggleBackend,
     SourceKind.GDRIVE: GdriveBackend,
     SourceKind.MODELSCOPE: ModelScopeBackend,
     SourceKind.BAIDU: BaiduBackend,
     SourceKind.MANUAL: ManualBackend,
     SourceKind.HTTP: HttpBackend,
-    SourceKind.HF: HttpBackend,  # huggingface_hub handled specially below
+    SourceKind.HF: HfBackend,
 }
 
 
