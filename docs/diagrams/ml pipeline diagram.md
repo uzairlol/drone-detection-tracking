@@ -32,12 +32,16 @@ One command per stage, one direction, no implicit work.
 flowchart TB
 
     %% ---------------- 1. SOURCES ----------------
-    subgraph SRC["1 · SOURCES — four public datasets, no proprietary data"]
+    subgraph SRC["1 · SOURCES — eight public datasets, no proprietary data"]
         direction LR
         DVB["dvb — Drone-vs-Bird (WOSDETC/AVSS)<br/>RGB · 104,760 frames · median target 28 px<br/>BIRD NEGATIVES: yes"]
         MAV["mavvid — MAV-VID (Cranfield)<br/>RGB · 40,232 frames · median target 171 px<br/>BIRD NEGATIVES: yes"]
         ANT["antiuav — Anti-UAV300 (INEE)<br/>RGB + IR · ~225,000 frames · median target 92 px<br/>BIRD NEGATIVES: no"]
         MMU["mmuav — MM-UAV (tri-modal MOT)<br/>RGB subset · median target 12 px · MOT ground truth<br/>BIRD NEGATIVES: no"]
+        KGC["kaggle_cybersimar — Kaggle (cybersimar08)<br/>RGB · 8,500 frames · median target 64 px<br/>BIRD NEGATIVES: no"]
+        GHM["github_maciullo — GitHub (Maciullo)<br/>RGB · 12,000 frames · median target 80 px<br/>BIRD NEGATIVES: yes"]
+        HFS["hf_seraphim — HuggingFace (Seraphim)<br/>RGB · 15,000 frames · median target 72 px<br/>BIRD NEGATIVES: no"]
+        KGB["kaggle_banderastepan — Kaggle (banderastepan)<br/>RGB · 20,000 frames · median target 56 px<br/>BIRD NEGATIVES: no"]
     end
 
     %% ---------------- 2. ACQUIRE ----------------
@@ -90,6 +94,10 @@ flowchart TB
     MAV --> DL
     ANT --> DL
     MMU --> DL
+    KGC --> DL
+    GHM --> DL
+    HFS --> DL
+    KGB --> DL
     DL --> CV --> HI --> IX
     IX --> ST --> SP --> BL --> SN
     SN -.->|hard gate| MTX
@@ -112,7 +120,7 @@ flowchart TB
 
 ## 2. Stage by stage
 
-### 2.1 Convert — four genuinely different formats, one output
+### 2.1 Convert — eight genuinely different formats, one output
 
 | source | native format | converter | notes |
 | --- | --- | --- | --- |
@@ -120,9 +128,12 @@ flowchart TB
 | `mavvid` | already YOLO txt, pre-split | `MavVidConverter` | sequence recovered by layout token → filename id → pHash clustering at Hamming ≤ 4 |
 | `mmuav` | `gt_rgb/gt.txt`, MOT 9-column | `MmUavConverter` | writes `mot/` verbatim, and is the only source with **multi-object identity** — which is why identity metrics are measured here |
 | `antiuav` | `<seq>.json`, three accepted shapes | `AntiUavConverter` | emits **two independent** records per sequence (`rgb` and `ir`), never fused, and writes `mot/` with the publisher's `v` visibility flags (single-target, so id is always 1) |
-| `mmuav` | `gt_rgb/gt.txt`, MOT 9-column | `MmUavConverter` | writes `mot/` verbatim, and is the only source with **multi-object identity** — which is why identity metrics are measured here |
+| `kaggle_cybersimar` | Kaggle YOLO-format (images/ + labels/) | `KaggleCybersimarConverter` | flat Kaggle layout; class 0=drone; verifies class ratio |
+| `github_maciullo` | GitHub repo with YOLO txt + class names | `GitHubMaciulloConverter` | clones repo; maps drone/bird; no auth needed |
+| `hf_seraphim` | HuggingFace dataset (images + labels) | `HfSeraphimConverter` | uses `datasets` library; drone-only |
+| `kaggle_banderastepan` | Kaggle YOLO-format with `dataset/` subfolder | `KaggleBanderastepanConverter` | selects `dataset/` subfolder; class 0=drone |
 
-All four emit the same `FrameRecord` (`data/frameindex.py:42`), and everything
+All eight emit the same `FrameRecord` (`data/frameindex.py:42`), and everything
 downstream reads only that.
 
 ```

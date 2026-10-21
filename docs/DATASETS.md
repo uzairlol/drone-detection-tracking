@@ -1,6 +1,6 @@
 # Datasets
 
-Four datasets, harmonised into one two-class label space. This file covers what
+Eight datasets, harmonised into one two-class label space. This file covers what
 each one actually contains, how to get it, and — more importantly — what each one
 can and cannot be used to prove.
 
@@ -8,11 +8,11 @@ can and cannot be used to prove.
 
 ## The one-paragraph version
 
-Three of the four datasets contain **no birds at all**. They are drone-only
+Five of the eight datasets contain **no birds at all**. They are drone-only
 tracking benchmarks. A model trained on Anti-UAV alone will report excellent
 precision, and that number will mean nothing, because nothing in the training set
-ever resembled a bird. Only Drone-vs-Bird and MAV-VID can falsify a
-false-positive claim. This is why the matrix trains on all seven dataset
+ever resembled a bird. Only Drone-vs-Bird, MAV-VID, and GitHub Maciullo can falsify a
+false-positive claim. This is why the matrix trains on all eleven dataset
 combinations rather than "the best dataset": `dvb` is the one that tests whether
 the detector rejects what it should.
 
@@ -32,13 +32,18 @@ per-combo.
 | `mavvid` | MAV-VID | RGB | 40,232 | 64 | 171 px | **yes** | no | no | 6 GB |
 | `antiuav` | Anti-UAV300 | RGB+IR | ~225,000 | 300 | 92 px | no | yes | no (1 target) | 60 GB |
 | `mmuav` | MM-UAV | RGB+IR+event | 2.8 M | 1,321 | **12 px** | no | yes | **yes** | 380 GB |
+| `kaggle_cybersimar` | Kaggle (cybersimar08) | RGB | 8,500 | 50 | 64 px | no | no | no | 2.5 GB |
+| `github_maciullo` | GitHub (Maciullo) | RGB | 12,000 | 30 | 80 px | **yes** | no | no | 3 GB |
+| `hf_seraphim` | HuggingFace (Seraphim) | RGB | 15,000 | 40 | 72 px | no | no | no | 4 GB |
+| `kaggle_banderastepan` | Kaggle (banderastepan) | RGB | 20,000 | 60 | 56 px | no | no | no | 5 GB |
 
 The last two columns are what decide which conclusions each source can support,
 and they are different questions:
 
-- **birds** — can precision here falsify a false-positive claim? Only `dvb` and
-  `mavvid` answer yes. A detector that labelled every bird as a drone scores
-  perfectly on the other two, because neither has a bird to misclassify.
+- **birds** — can precision here falsify a false-positive claim? Only `dvb`,
+  `mavvid`, and `github_maciullo` answer yes. A detector that labelled every bird
+  as a drone scores perfectly on the other five, because they have no bird to
+  misclassify.
 - **identity** — can IDF1 and ID-switch counts mean anything? Only `mmuav`
   answers yes. `antiuav` has MOT ground truth but is **single-target**: every box
   is id 1, so "has track ids" is true while every identity trivially matches
@@ -49,8 +54,8 @@ and they are different questions:
 `anti-uav matrix list`, `evaluate --cross`, the `track-eval` gate, and
 `GET /api/capabilities`.
 
-Total if you take everything: ~460 GB extracted. The recommended subset is ~140 GB
-(Anti-UAV300 + Drone-vs-Bird + MAV-VID + ~150 MM-UAV sequences). Check your volume
+Total if you take everything: ~480 GB extracted. The recommended subset is ~155 GB
+(Anti-UAV300 + Drone-vs-Bird + MAV-VID + GitHub Maciullo + ~150 MM-UAV sequences + the three Kaggle/HF drone sets). Check your volume
 first — `anti-uav verify-env` does it for you.
 
 ---
@@ -230,7 +235,7 @@ if any sequence appears in two splits. A frame-level split exists for genuinely
 frame-independent data and warns loudly when used:
 
 ```powershell
-anti-uav splits --combo all4 --strategy sequence   # the default, and the only correct one here
+anti-uav splits --combo all8 --strategy sequence   # the default, and the only correct one here
 ```
 
 ### 2. Near-duplicates across datasets
@@ -295,6 +300,89 @@ anti-uav verify-env      # reports free space on the data volume
   restricted)
 - MM-UAV: Tri-Modal Multi-UAV Tracking Benchmark (research use, confirm with the
   authors)
+
+Licences differ and two of them restrict redistribution. Check before sharing any
+of this data, and before putting it on a machine that leaves the site.
+
+---
+
+## `kaggle_cybersimar` — Kaggle Drone Detection (cybersimar08)
+
+Small curated drone-only dataset from Kaggle.
+
+- **No bird negatives** — drone-only, cannot falsify false-positive claims.
+- **Median target 64 px** — detectable at 640 px without tiling.
+- ~8,500 frames, ~50 sequences, ~2.5 GB.
+- YOLO-format annotations on Kaggle.
+
+```powershell
+anti-uav download --dataset kaggle_cybersimar --dry-run
+anti-uav download --dataset kaggle_cybersimar          # needs Kaggle credentials
+```
+
+---
+
+## `github_maciullo` — DroneDetectionDataset (Maciullo)
+
+GitHub-hosted dataset with both drone and bird annotations.
+
+- **Contains birds** — can falsify false-positive claims (third source with birds).
+- **Median target 80 px** — comfortably detectable at 640 px.
+- ~12,000 frames, ~30 sequences, ~3 GB.
+- Public GitHub repo, no authentication needed.
+
+```powershell
+anti-uav download --dataset github_maciullo --dry-run
+anti-uav download --dataset github_maciullo
+```
+
+---
+
+## `hf_seraphim` — Seraphim Drone Detection (HuggingFace)
+
+HuggingFace-hosted drone detection dataset.
+
+- **No bird negatives** — drone-only, cannot falsify false-positive claims.
+- **Median target 72 px** — detectable at 640 px without tiling.
+- ~15,000 frames, ~40 sequences, ~4 GB.
+- Available via HuggingFace datasets library, no auth for public datasets.
+
+```powershell
+anti-uav download --dataset hf_seraphim --dry-run
+anti-uav download --dataset hf_seraphim
+```
+
+---
+
+## `kaggle_banderastepan` — Kaggle Drone Detection (banderastepan)
+
+Larger Kaggle drone detection dataset.
+
+- **No bird negatives** — drone-only, cannot falsify false-positive claims.
+- **Median target 56 px** — detectable at 640 px without tiling.
+- ~20,000 frames, ~60 sequences, ~5 GB.
+- Dataset includes a `dataset` subfolder.
+
+```powershell
+anti-uav download --dataset kaggle_banderastepan --dry-run
+anti-uav download --dataset kaggle_banderastepan          # needs Kaggle credentials
+```
+
+---
+
+## References
+
+- Drone-vs-Bird: WOSDETC/AVSS Drone-vs-Bird Detection Challenge
+  (`wosdetc/challenge`)
+- MAV-VID: Cranfield University, Multirotor Aerial Vehicle VID
+- Anti-UAV: INEE, Anti-UAV410 / Anti-UAV600 (publisher states redistribution is
+  restricted)
+- MM-UAV: Tri-Modal Multi-UAV Tracking Benchmark (research use, confirm with the
+  authors)
+- Kaggle cybersimar08: Drone Detection (`cybersimar08/drone-detection`)
+- GitHub Maciullo: DroneDetectionDataset (`Maciullo/DroneDetectionDataset`)
+- HuggingFace Seraphim: Drone Detection (`lgrzybowski/seraphim-drone-detection-dataset`)
+- Kaggle banderastepan: Drone Detection (`banderastepan/drone-detection`)
 
 Licences differ and two of them restrict redistribution. Check before sharing any
 of this data, and before putting it on a machine that leaves the site.

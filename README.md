@@ -2,7 +2,7 @@
 
 Research pipeline for the 100-camera anti-UAV system: dataset acquisition,
 conversion and leakage-safe splitting, training and evaluating **YOLO11n** and
-**RT-DETR-x2** across four public datasets, then local multi-object tracking,
+**RT-DETR-x2** across eight public datasets, then local multi-object tracking,
 cross-camera identity fusion, and the camera-coordination layer.
 
 The system design this implements is in
@@ -22,14 +22,15 @@ exported — is in
 
 ## The one-paragraph version
 
-Four public datasets, harmonised into a single two-class `drone` / `bird` label
-space, split **by sequence** so no video's adjacent frames straddle the train/val
-boundary, and used in seven combinations. Two detectors are trained on all seven —
-fourteen runs — sharing one data pipeline, one evaluator and one tracker stack.
-The hard part is not the detectors; it is that three of the four datasets are
-**drone-only**, so precision measured on them cannot falsify a false-positive
-claim, and that the smallest targets (MM-UAV, 12×5 px) are invisible at a 640 px
-input without tiling. Both are handled explicitly rather than assumed away.
+Eight public datasets, harmonised into a single two-class `drone` / `bird` label
+space, split **by sequence** so no video's adjacent frames straddle the
+train/val boundary, and used in fourteen combinations. Two detectors are
+trained on all fourteen — twenty-eight runs — sharing one data pipeline, one
+evaluator and one tracker stack. The hard part is not the detectors; it is that
+five of the eight sources are **drone-only**, so precision measured on them
+cannot falsify a false-positive claim, and that the smallest targets (MM-UAV,
+12×5 px) are invisible at a 640 px input without tiling. Both are handled
+explicitly rather than assumed away.
 
 ---
 
@@ -41,6 +42,10 @@ input without tiling. Both are handled explicitly rather than assumed away.
 | `mavvid` | MAV-VID (Cranfield) | RGB | 40,232 | 215×128 px | **yes** | Bitbucket |
 | `antiuav` | Anti-UAV300 (INEE) | RGB+IR | ~225,000 | 125×59 / 52×29 px | no | Google Drive |
 | `mmuav` | MM-UAV (tri-modal MOT) | RGB (+IR) | 2.8 M (subset) | **12×5 px** | no | Baidu Pan |
+| `kaggle_cybersimar` | Kaggle Drone Detection (cybersimar08) | RGB | 8,500 | 64 px | no | Kaggle |
+| `github_maciullo` | DroneDetectionDataset (Maciullo) | RGB | 12,000 | 80 px | **yes** | GitHub |
+| `hf_seraphim` | Seraphim Drone Detection (HuggingFace) | RGB | 15,000 | 72 px | no | HuggingFace |
+| `kaggle_banderastepan` | Kaggle Drone Detection (banderastepan) | RGB | 20,000 | 56 px | no | Kaggle |
 
 `antiuav` and `mmuav` contain no bird annotations. Any precision number from a
 combo built only from those is **unfalsifiable** — the tooling refuses to present
@@ -67,27 +72,29 @@ anti-uav fetch-weights
 anti-uav download --dataset all --dry-run
 anti-uav download --dataset dvb
 anti-uav download --dataset mavvid
+anti-uav download --dataset github_maciullo     # no credentials needed
+anti-uav download --dataset hf_seraphim         # no credentials needed
 anti-uav download --dataset antiuav --variant 300
 anti-uav download --dataset mmuav --max-sequences 150 --modalities rgb
 
 # 2. preprocess - in this order, and the order matters
 anti-uav convert --dataset all
 anti-uav stats   --dataset all
-anti-uav splits  --combo all4
-anti-uav build   --combo all4
-anti-uav sanity  --combo all4
+anti-uav splits  --combo all8
+anti-uav build   --combo all8
+anti-uav sanity  --combo all8
 
-# 3. train (14 runs: 2 models x 7 combos)
+# 3. train (28 runs: 2 models x 14 combos)
 anti-uav matrix list
 anti-uav matrix run --models yolo11n,rtdetr_x2 --combos all --dry-run
 .\scripts\train_matrix.ps1 -Profile blackwell -DryRun
 
 # 4. evaluate, track, export
-anti-uav evaluate       --run artifacts/runs/yolo11n/all4 --cross
-anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav
-anti-uav replay     --run artifacts/runs/yolo11n/all4 --dataset mmuav --sequence 0007
-anti-uav predict    --run artifacts/runs/yolo11n/all4 --source clip.mp4 --save out/
-anti-uav export     --run artifacts/runs/yolo11n/all4 --formats onnx,tensorrt --fp16
+anti-uav evaluate       --run artifacts/runs/yolo11n/all8 --cross
+anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav
+anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence 0007
+anti-uav predict    --run artifacts/runs/yolo11n/all8 --source clip.mp4 --save out/
+anti-uav export     --run artifacts/runs/yolo11n/all8 --formats onnx,tensorrt --fp16
 
 # 5. the interface
 anti-uav serve      # http://127.0.0.1:8000
@@ -170,17 +177,22 @@ docs/             commands, datasets, experiments, environment, architecture
 | file | what is in it |
 | --- | --- |
 | [docs/COMMANDS.md](docs/COMMANDS.md) | every command, in run order, with what it refuses to do |
-| [docs/DATASETS.md](docs/DATASETS.md) | the four datasets, how to fetch each, the MM-UAV 400 GB → 12 GB subsetting |
-| [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | the 14-run matrix, what to run first, how to read results without fooling yourself |
+| [docs/DATASETS.md](docs/DATASETS.md) | the eight datasets, how to fetch each, the MM-UAV 400 GB → 12 GB subsetting |
+| [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | the 28-run matrix, what to run first, how to read results without fooling yourself |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | GPU profiles, why CUDA 12.8 breaks a GTX 1070, extras, disk planning |
 | [notebooks/kaggle_dvb.ipynb](notebooks/kaggle_dvb.ipynb) | end-to-end run on Kaggle T4x2: install, download, preprocess, train, evaluate |
+| [notebooks/kaggle_combined.ipynb](notebooks/kaggle_combined.ipynb) | **one YOLO11n trained on all eight datasets** — the multi-dataset model |
+| [notebooks/kaggle_maciullo.ipynb](notebooks/kaggle_maciullo.ipynb) | the third bird-negative source; no credentials needed |
+| [notebooks/kaggle_cybersimar.ipynb](notebooks/kaggle_cybersimar.ipynb) | the first added Kaggle source |
+| [notebooks/kaggle_seraphim.ipynb](notebooks/kaggle_seraphim.ipynb) | the HuggingFace source |
+| [notebooks/kaggle_banderastepan.ipynb](notebooks/kaggle_banderastepan.ipynb) | the largest added Kaggle source |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | how it fits together and why the non-obvious decisions were made |
 | [docs/diagrams/](docs/diagrams/) | the system block diagram (Mermaid source plus exports) and the ML pipeline diagram |
 
 ## Tests
 
 ```powershell
-python -m pytest                      # 295 tests, no GPU, no datasets, ~25 s
+python -m pytest                      # 347 tests, no GPU, no datasets, ~90 s
 python -m ruff check src tests scripts
 python -m mypy
 ```

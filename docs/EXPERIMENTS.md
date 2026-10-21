@@ -1,6 +1,6 @@
 # Experiments
 
-14 runs: two detector families across seven dataset combinations. This file
+28 runs: two detector families across fourteen dataset combinations. This file
 explains what the matrix is for, how to run it, and — the part that matters most —
 how to read the results without fooling yourself.
 
@@ -16,15 +16,22 @@ Combos, in planner order (single-source first, cumulative last):
 | `mavvid` | MAV-VID | does it transfer to a different capture domain? |
 | `antiuav` | Anti-UAV | does it track, with occlusion? |
 | `mmuav` | MM-UAV | does it detect 12 px targets when tiled? |
-| `dvb+mavvid` | both bird datasets | is more bird data better? |
+| `kaggle_cybersimar` | Kaggle (cybersimar08) | does it work on a community-curated set? |
+| `github_maciullo` | GitHub (Maciullo) | bird rejection on a third bird-positive source? |
+| `hf_seraphim` | HuggingFace (Seraphim) | does it work on a hub-hosted distribution? |
+| `kaggle_banderastepan` | Kaggle (banderastepan) | does more of the same community data help? |
+| `dvb+mavvid` | both original bird datasets | is more bird data better? |
+| `birds3` | all three bird-negative sources | is three times the bird data better still? |
 | `dvb+mavvid+antiuav` | + Anti-UAV | bird suppression plus occlusion? |
-| `all4` | all four | is the combination worth deploying? |
+| `birds3+antiuav` | three bird sources + Anti-UAV | bird rejection plus a second modality? |
+| `all4` | the original four | is the combination worth deploying? |
+| `all8` | everything | does the extra data help, and where does it cost? |
 
 Models: `yolo11n` (fast, small) and `rtdetr_x2` (NMS-free, stronger on small
-targets). 7 x 2 = 14.
+targets). 14 x 2 = 28.
 
 ```powershell
-anti-uav matrix list                                    # all 14, with resolved settings
+anti-uav matrix list                                    # all 28, with resolved settings
 anti-uav matrix run --models yolo11n --combos all --dry-run
 .\scripts\train_matrix.ps1 -Profile blackwell            # run them, resumable
 ```
@@ -32,23 +39,48 @@ anti-uav matrix run --models yolo11n --combos all --dry-run
 `--dry-run` costs nothing and prints the resolved hyperparameters, the output
 path and the dataset summary. Use it before every expensive job.
 
+> The two cumulative slugs are short on purpose: `birds3` is the three
+> bird-negative sources and `birds3+antiuav` adds Anti-UAV to them. The
+> capability table is width-budgeted to fit an 80-column console, and
+> `dvb+mavvid+github_maciullo` does not fit in a column.
+
 ---
 
 ## What to run first
 
-You do not have time for all 14 on the first pass. Two runs answer most of it:
+You do not have time for all 28 on the first pass. Three runs answer most of it:
 
 ```powershell
 anti-uav train --model yolo11n --combo dvb
-anti-uav train --model yolo11n --combo all4
+anti-uav train --model yolo11n --combo github_maciullo
+anti-uav train --model yolo11n --combo all8
 ```
 
-- **`dvb`** — the only combo that can falsify a false-positive claim. If precision
+- **`dvb`** — the combo that can falsify a false-positive claim. If precision
   here is poor, nothing else matters yet.
-- **`all4`** — whether combining four sources beats the best single one.
+- **`github_maciullo`** — the *third* bird-negative source, and the cheapest one
+  to fetch (a public git clone, no credentials). It answers "does bird rejection
+  hold on a distribution the model has never seen" without a 14 GB download.
+- **`all8`** — whether combining eight sources beats the best single one.
 
 Then `mmuav` alone, because tiling is a different regime and you want to know
 whether it works before it contaminates every combo.
+
+### Training one model on many datasets
+
+Yes — and that is the point of the cumulative combos. `anti-uav train --combo
+all8` builds a single YOLO11n on all eight sources, and `notebooks/
+kaggle_combined.ipynb` is that run end to end on Kaggle.
+
+The comparison to make is **not** "is the combined mAP higher". It is:
+
+- is the combined model at least as good on the *bird-negative* sources
+  (`dvb`, `mavvid`, `github_maciullo`), and
+- is it better on the sources it has never seen?
+
+The first half is the regression check and the second is the whole hypothesis. A
+model trained on `dvb` alone will score badly on `github_maciullo`; a model
+trained on both should not.
 
 ---
 
@@ -89,14 +121,23 @@ dvb                  dvb        -         -               dvb
 mavvid               mavvid     -         -               -
 antiuav              -          -         antiuav         -
 mmuav                -          mmuav     mmuav           mmuav
+github_maciullo      github...  -         -               -
 dvb+mavvid           dvb,mavvid -         -               dvb
+birds3               dvb,mav,gh -         -               dvb
 dvb+mavvid+antiuav   dvb,mavvid -         antiuav         dvb
+birds3+antiuav       dvb,mav,gh -         antiuav         dvb
 all4                 dvb,mavvid mmuav     antiuav,mmuav   dvb,mmuav
+all8                 dvb,mav,gh mmuav     antiuav,mmuav   dvb,mmuav
 ```
 
-Note `all4`: it *can* falsify false positives, because `dvb` and `mavvid` are in
-it. That says nothing about how either behaved on its own — which is why the
-per-dataset table is still the thing to read.
+Note `all8`: it *can* falsify false positives, because `dvb`, `mavvid` and
+`github_maciullo` are in it. That says nothing about how any of them behaved on
+its own — which is why the per-dataset table is still the thing to read.
+
+The alias lists are abbreviated when the table would otherwise wrap: the report
+is printed through a Rich console that hard-wraps at the terminal width, and a
+wrapped capability table is worse than none. The per-source table above the
+combo table spells every alias out in full.
 
 `anti-uav track-eval` enforces the tracking half: it **refuses** a dataset with no
 MOT ground truth and **warns** on single-target ground truth that IDF1 and ID

@@ -71,7 +71,7 @@ are load-bearing for correctness.
 
 ### Splits are by sequence, and `sanity` enforces it
 
-All four datasets are video-derived. Adjacent frames are near-identical, so a
+All eight datasets are video-derived. Adjacent frames are near-identical, so a
 frame-level split leaks and inflates mAP by double digits. `sanity` fails the
 build if any sequence appears in two splits.
 
