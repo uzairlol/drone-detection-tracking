@@ -157,19 +157,23 @@ datasets:
       - kind: bitbucket
         url: https://bitbucket.org/alejodosr/mav-vid-dataset
         label: Bitbucket mirror - mav-vid-dataset
-        approx_size_gb: 6.0
+        approx_size_gb: 11.5
         needs_credentials: false
         notes: >-
           The canonical Kaggle page (alejodosr/multirotor-aerial-vehicle-vid-
           mavvid-dataset) is dead. This Bitbucket repo, linked from the
           original authors' project page, is the surviving copy. It is already
           YOLO-annotated and pre-split, so ingest is a copy + rename rather
-          than video decoding.
+          than video decoding. The repo is not a frame tree: it holds a single
+          11.5 GB `mav_vid_dataset.zip`, which the git backend unpacks into
+          train/ and val/ and then deletes the clone. Bitbucket's raw and
+          archive endpoints refuse anonymous downloads of that file, so a
+          shallow clone is the only transport.
 
       - kind: kaggle
         url: alejodosr/multirotor-aerial-vehicle-vid-mavvid-dataset
         label: Kaggle (original, may be dead)
-        approx_size_gb: 6.0
+        approx_size_gb: 11.5
         needs_credentials: true
         notes: Fallback only. The UAVDetectionTrackingBenchmark repo reports the
           Kaggle page no longer resolves.

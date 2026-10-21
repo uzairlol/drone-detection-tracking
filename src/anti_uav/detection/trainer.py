@@ -237,7 +237,7 @@ def plan_run(
         amp=final_amp,
         tiling=final_tiling,
         tile_size=final_tile,
-        output_dir=str(subdir("runs") / family / combo_slug),
+        output_dir=str(subdir("runs") / family / f"{family}__{combo_slug}"),
         data_yaml=str(root / "data.yaml"),
         estimate_note=_estimate(family, final_epochs, final_imgsz, final_batch, final_amp, active),
     )

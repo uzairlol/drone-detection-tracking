@@ -107,7 +107,11 @@ tracking:
   handoff_verify_window_s: 0.5
 
   # Re-acquisition deadline after a track is declared lost.
-  recovery_budget_s: 1.5
+  # Must cover the handoff lead plus the verify window above: a handoff triggered
+  # at the 2.0 s lead needs the full 0.5 s verify window to confirm, so anything
+  # under 2.5 s gives up while a legitimate handoff is still in flight and the
+  # target is dropped between the two cameras.
+  recovery_budget_s: 2.5
 
   # Cosine similarity floor for the appearance gate during cross-camera
   # association.
