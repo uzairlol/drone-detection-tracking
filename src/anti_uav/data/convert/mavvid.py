@@ -23,6 +23,7 @@ visually similar adjacent videos.
 
 from __future__ import annotations
 
+import contextlib
 import re
 from collections.abc import Iterable
 from pathlib import Path
@@ -146,9 +147,10 @@ class MavVidConverter(Converter):
     def _split_roots(self) -> list[tuple[str, Path]]:
         found: list[tuple[str, Path]] = []
         for name in SPLIT_DIRS:
-            candidate = self.raw_root / name
-            if candidate.is_dir() and any(is_image(p) for p in candidate.rglob("*")):
-                found.append((name, candidate))
+            for candidate in self._candidate_roots(name):
+                if any(is_image(p) for p in candidate.rglob("*")):
+                    found.append((name, candidate))
+                    break
         if found:
             return found
         if any(is_image(p) for p in self.raw_root.rglob("*")):
@@ -163,6 +165,21 @@ class MavVidConverter(Converter):
             "directory, or a flat image tree. Check that the Bitbucket clone completed and "
             "that you are pointing at the repo root."
         )
+
+    def _candidate_roots(self, name: str) -> list[Path]:
+        """Split directories at the root, then one wrapper level down.
+
+        The mirror ships the payload as ``mav_vid_dataset.zip``; whether the
+        archive is flattened or keeps its top-level folder depends on how it was
+        packaged, and both are valid. Depth 2 covers the wrapper without letting a
+        stray ``train`` deep inside a frame tree masquerade as a split.
+        """
+        candidates = [self.raw_root / name]
+        try:
+            candidates.extend(sorted(p for p in self.raw_root.glob(f"*/{name}") if p.is_dir()))
+        except OSError:
+            pass
+        return [p for p in candidates if p.is_dir() and ".git" not in p.parts]
 
     def _resolve_sequence(
         self,

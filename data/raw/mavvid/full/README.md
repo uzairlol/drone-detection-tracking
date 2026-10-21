@@ -13,6 +13,12 @@ The registry prefers the **Bitbucket** mirror
 (`https://bitbucket.org/alejodosr/mav-vid-dataset`), because the original Kaggle
 page is dead. This dataset needs **no credentials**.
 
+The mirror is not a frame tree: it holds one `mav_vid_dataset.zip` (11.5 GB). The
+git backend shallow-clones it, unpacks the zip into this directory, and removes
+the clone (including `.git`) so the payload is not stored twice. Bitbucket's raw
+and archive URLs return nothing for a file this size, so the clone is the only
+working transport.
+
 ## What you should see afterwards
 
 Already YOLO-annotated and pre-split by the publisher, so ingest is a copy and
@@ -37,7 +43,8 @@ anti-uav stats    --dataset mavvid
 
 ## Things that will bite you
 
-- **~6 GB.** The smallest download in the matrix.
+- **~11.5 GB** as shipped (the registry used to say 6 GB, which cost people a
+  failed free-space check). It is still the smallest download in the matrix.
 - Label spelling varies between releases (`drone` / `Drone` / `0`). The converter
   normalises case and numeric ids, then asserts every observed label was mapped.
   It prints which spelling it actually saw — read that line.

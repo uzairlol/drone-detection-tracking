@@ -121,7 +121,13 @@ def evaluate_run(
         data=str(data_path),
         split=split,
         imgsz=imgsz or settings.imgsz,
-        conf=conf if conf is not None else settings.conf_threshold,
+        # Deliberately NOT settings.conf_threshold. AP is integrated over the whole
+        # precision-recall curve, so it only means anything if detections are kept
+        # down to ~0.001. The deployed 0.25 is an inference threshold: feeding it in
+        # truncates the curve and silently reports lower AP than the same weights
+        # scored at train time (0.876 vs 0.919 mAP50 on dvb). Precision/recall at an
+        # operating point belong in `predict`, not in the metric.
+        conf=conf,
         device=device or settings.device,
         batch=batch if batch is not None else (16 if settings.device != "cpu" else 4),
         plots=plots,
@@ -217,6 +223,23 @@ def _data_yaml_notes(data_yaml: Path) -> list[str]:
     return notes
 
 
+def _dotted(obj: Any, path: str) -> Any:
+    """Resolve ``"box.mp"`` by walking attributes.
+
+    ``getattr(obj, "box.mp")`` does **not** traverse - it looks for an attribute
+    literally named ``"box.mp"``, finds none, and returns None. That silently
+    emptied the headline metrics on every ``evaluate`` run, while the per-class
+    breakdown (which resolves ``box`` first) kept working, so the cross table
+    printed 0.0000 beside real per-class numbers.
+    """
+    current = obj
+    for part in path.split("."):
+        if current is None:
+            return None
+        current = getattr(current, part, None)
+    return current
+
+
 def _extract(metrics: Any) -> dict[str, float]:
     """Pull the headline numbers out of an ultralytics ``DetMetrics``."""
     out: dict[str, float] = {}
@@ -228,13 +251,13 @@ def _extract(metrics: Any) -> dict[str, float]:
     }
     for key, attributes in candidates.items():
         for attribute in attributes:
-            value = getattr(metrics, attribute, None)
+            value = _dotted(metrics, attribute)
             if value is not None:
                 out[key] = _as_float(value)
                 break
 
     for key, attribute in (("fitness", "fitness"), ("fitness_full", "fitness_full")):
-        value = getattr(metrics, attribute, None)
+        value = _dotted(metrics, attribute)
         if value is not None:
             out[key] = _as_float(value)
     return out
@@ -257,10 +280,16 @@ def _per_class(metrics: Any) -> tuple[dict[str, dict[str, float]], dict[str, dic
         entry: dict[str, float] = {}
         scale_entry: dict[str, dict[str, float]] = {}
 
-        precision = _index(getattr(metrics, "box", None), "p", index)
-        recall = _index(getattr(metrics, "box", None), "r", index)
-        map50 = _index(getattr(metrics, "box", None), "map50", index)
-        map95 = _index(getattr(metrics, "box", None), "map", index)
+        box = getattr(metrics, "box", None)
+        precision = _index(box, "p", index)
+        recall = _index(box, "r", index)
+        # NOT "map50"/"map": on ultralytics' Metric those are the *mean across
+        # classes*, so indexing them raises TypeError and every per-class AP came
+        # back absent - which is why the bird column of the cross table was blank
+        # on the one dataset that can falsify a precision claim. The per-class
+        # arrays are `ap50` (AP@0.5) and `ap`/`maps` (AP@0.5:0.95).
+        map50 = _first_index(box, ("ap50",), index)
+        map95 = _first_index(box, ("ap", "maps"), index)
 
         if precision is not None:
             entry["precision"] = precision
@@ -271,6 +300,11 @@ def _per_class(metrics: Any) -> tuple[dict[str, dict[str, float]], dict[str, dic
         if map95 is not None:
             entry["map50-95"] = map95
 
+        # Per-object-size AP only exists if ultralytics exposes it. Note the trap:
+        # probing `map` + "s" == `maps` silently succeeded, because `maps` is the
+        # per-class mAP50-95 array - so the "small" bucket was quietly reporting
+        # overall per-class AP and the column was mislabelled. Only accept a name
+        # that really is a per-scale array.
         for scale, suffixes in (
             ("small", ("s",)),
             ("medium", ("m",)),
@@ -278,8 +312,8 @@ def _per_class(metrics: Any) -> tuple[dict[str, dict[str, float]], dict[str, dic
         ):
             values: dict[str, float] = {}
             for suffix in suffixes:
-                for label, base in (("map50", f"map50{suffix}"), ("map50-95", f"map{suffix}")):
-                    value = _index(getattr(metrics, "box", None), base, index)
+                for label, base in (("map50", f"ap50{suffix}"), ("map50-95", f"ap{suffix}")):
+                    value = _index(box, base, index)
                     if value is not None:
                         values[label] = value
             if values:
@@ -291,6 +325,15 @@ def _per_class(metrics: Any) -> tuple[dict[str, dict[str, float]], dict[str, dic
             per_scale[str(name)] = scale_entry
 
     return per_class, per_scale
+
+
+def _first_index(container: Any, attributes: Sequence[str], index: int) -> float | None:
+    """Return the first attribute that yields a real value at ``index``."""
+    for attribute in attributes:
+        value = _index(container, attribute, index)
+        if value is not None:
+            return value
+    return None
 
 
 def _index(container: Any, attribute: str, index: int) -> float | None:
@@ -429,9 +472,10 @@ def _cross_eval_yaml(alias: str, spec: DatasetSpec) -> Path | None:
     root.mkdir(parents=True, exist_ok=True)
 
     # Symlink the val images rather than copying: a full copy would duplicate
-    # tens of GB for no reason.
+    # tens of GB for no reason. Labels go alongside them - `link_images` writes both.
     for split in ("train", "val"):
         (root / "images" / split).mkdir(parents=True, exist_ok=True)
+        (root / "labels" / split).mkdir(parents=True, exist_ok=True)
 
     link_images(records, root)
 
@@ -453,15 +497,30 @@ def _cross_eval_yaml(alias: str, spec: DatasetSpec) -> Path | None:
 
 
 def link_images(records: Sequence[Any], root: Path) -> int:
-    """Hard-link a dataset's frames into a cross-eval split tree."""
+    """Hard-link a dataset's frames and labels into a cross-eval split tree.
+
+    Two things this must get right or the table it feeds is silently zero:
+
+    - **Unique target names.** The interim layout is ``frames/<seq>/<modality>/<n>.jpg``,
+      so ``Path(record.image).name`` is ``000000.jpg`` for *every* frame. Flattening on
+      the basename collapses thousands of frames onto one file and the evaluator then
+      reports 0.0000 for everything while still exiting 0. Use the same stem as
+      ``data/build.py`` so the names are unique and match the combo builds.
+    - **Labels, not just images.** ``_write_data_yaml`` points at ``images/train`` and
+      ``images/val``; ultralytics resolves the label dir by swapping ``images`` for
+      ``labels``. Images alone therefore score as zero instances, because there is
+      nothing under ``labels/`` to count.
+    """
     from ..data.frameindex import interim_root
 
     linked = 0
     for record in records:
         if record.split not in {"train", "val"}:
             continue
-        source = interim_root(record.dataset, record.variant) / record.image
-        target = root / "images" / record.split / Path(record.image).name
+        root_dir = interim_root(record.dataset, record.variant)
+        source = root_dir / record.image
+        stem = f"{record.dataset}__{record.group_key.replace('/', '_')}__{Path(record.image).stem}"
+        target = root / "images" / record.split / f"{stem}.jpg"
         if target.exists() or not source.is_file():
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -473,6 +532,23 @@ def link_images(records: Sequence[Any], root: Path) -> int:
             import shutil
 
             shutil.copy2(source, target)
+
+        label_target = root / "labels" / record.split / f"{stem}.txt"
+        label_target.parent.mkdir(parents=True, exist_ok=True)
+        label_source = root_dir / record.label
+        if label_source.is_file():
+            try:
+                import os
+
+                os.link(label_source, label_target)
+            except OSError:
+                import shutil
+
+                shutil.copy2(label_source, label_target)
+        else:
+            # A frame with no label file is a genuine negative; ultralytics treats a
+            # missing .txt as "no objects", so an empty file is the correct encoding.
+            label_target.write_text("", encoding="utf-8")
         linked += 1
     return linked
 
@@ -507,7 +583,7 @@ def format_cross_table(results: dict[str, EvalResult]) -> str:
     registry = load_registry()
     header = (
         f"{'dataset':<10}{'map50':>8}{'map50-95':>10}{'prec':>8}{'recall':>8}"
-        f"{'drone AP_S':>12}{'bird AP':>10}  {'falsifiable?'}"
+        f"{'drone AP50-95':>15}{'bird AP50':>11}  {'falsifiable?'}"
     )
     lines = [header, "-" * len(header)]
 
@@ -515,17 +591,17 @@ def format_cross_table(results: dict[str, EvalResult]) -> str:
         result = results[alias]
         spec = registry.datasets.get(alias)
         bird_falsifiable = bool(spec and spec.has_bird_negatives)
-        drone_small = _lookup(result, "drone", "small", "map50-95")
+        drone = _lookup(result, "drone", None, "map50-95")
         bird = _lookup(result, "bird", None, "map50")
 
         lines.append(
             f"{alias:<10}"
-            f"{result.map50:>8.4f}"
-            f"{result.map:>10.4f}"
-            f"{result.metrics.get('precision', 0.0):>8.4f}"
-            f"{result.metrics.get('recall', 0.0):>8.4f}"
-            f"{drone_small:>12.4f}"
-            f"{bird:>10.4f}"
+            f"{_cell(result.metrics.get('map50'), 8)}"
+            f"{_cell(result.metrics.get('map50-95'), 10)}"
+            f"{_cell(result.metrics.get('precision'), 8)}"
+            f"{_cell(result.metrics.get('recall'), 8)}"
+            f"{_cell(drone, 15)}"
+            f"{_cell(bird, 11)}"
             f"  {'yes' if bird_falsifiable else 'NO (drone-only)'}"
         )
 
@@ -535,15 +611,32 @@ def format_cross_table(results: dict[str, EvalResult]) -> str:
     lines.append("")
     lines.append("Rows marked NO cannot falsify a precision claim. Judge false positives")
     lines.append("only on the dvb and mavvid rows.")
+    lines.append("")
+    lines.append("A '-' means the metric is absent - usually no converted val split for that")
+    lines.append("source. It is NOT a score of zero.")
     return "\n".join(lines)
 
 
-def _lookup(result: EvalResult, class_name: str, scale: str | None, metric: str) -> float:
-    if scale:
-        return float(
-            result.per_class_and_scale.get(class_name, {}).get(scale, {}).get(metric, 0.0)
-        )
-    return float(result.per_class.get(class_name, {}).get(metric, 0.0))
+def _cell(value: float | None, width: int = 8) -> str:
+    """Format a metric, rendering ``None`` as ``-`` rather than ``0.0000``.
+
+    A metric that was never computed and a metric that genuinely came out at zero
+    are different facts, and a table that prints both as 0.0000 invites reading a
+    dataset the evaluator never saw as a detector that found nothing.
+    """
+    if value is None:
+        return f"{'-':>{width}}"
+    return f"{float(value):>{width}.4f}"
+
+
+def _lookup(result: EvalResult, class_name: str, scale: str | None, metric: str) -> float | None:
+    entry = (
+        result.per_class_and_scale.get(class_name, {}).get(scale, {})
+        if scale
+        else result.per_class.get(class_name, {})
+    )
+    value = entry.get(metric)
+    return None if value is None else float(value)
 
 
 def format_result(result: EvalResult) -> str:

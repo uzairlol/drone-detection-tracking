@@ -612,7 +612,7 @@ class TrackingRule(_Strict):
     handoff_trigger_lead_s: float = Field(default=2.0, ge=0.0)
     handoff_verify_frames: int = Field(default=3, ge=1)
     handoff_verify_window_s: float = Field(default=0.5, gt=0.0)
-    recovery_budget_s: float = Field(default=1.5, gt=0.0)
+    recovery_budget_s: float = Field(default=2.5, gt=0.0)
     reid_similarity_threshold: float = Field(default=0.55, ge=0.0, le=1.0)
     #: Association gate combining motion and appearance cost.
     max_association_cost: float = Field(default=0.75, ge=0.0, le=1.0)

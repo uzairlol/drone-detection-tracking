@@ -265,11 +265,17 @@ def download(
     max_sequences: Annotated[
         int | None, typer.Option(help="MM-UAV subset size. 150 is ~12 GB of 400 GB.")
     ] = None,
+    no_progress: Annotated[
+        bool, typer.Option("--no-progress", help="Disable the live transfer bar.")
+    ] = False,
 ) -> None:
     """Fetch a dataset. Always start with ``--dry-run``."""
     from .config.loader import load_dataset, load_registry
     from .config.schema import Modality
     from .data.download import download as _download
+    from .utils.progress import NullProgress, RichProgress
+
+    reporter = NullProgress() if no_progress else RichProgress(console)
 
     wanted = _comma_list(modalities)
     chosen = [m.strip().lower() for m in wanted] or None
@@ -284,24 +290,29 @@ def download(
             _fail(str(exc))
             return
 
-        for result in _download(
-            spec,
-            variant=variant,
-            source_label=source,
-            dry_run=dry_run,
-            max_sequences=max_sequences,
-            modalities=modality_enum,
-        ):
-            status = _STATUS_STYLES.get(result.status, result.status)
+        try:
+            for result in _download(
+                spec,
+                variant=variant,
+                source_label=source,
+                dry_run=dry_run,
+                max_sequences=max_sequences,
+                modalities=modality_enum,
+                progress=reporter,
+            ):
+                status = _STATUS_STYLES.get(result.status, result.status)
 
-            console.print(f"\n[bold]{alias}[/] - {result.source}  {status}")
-            plan = result.extras.get("plan")
-            if plan:
-                console.print(str(plan), markup=False)
-            if result.error:
-                console.print(result.error, markup=False)
-            if result.sha256:
-                console.print(f"sha256: {result.sha256}")
+                console.print(f"\n[bold]{alias}[/] - {result.source}  {status}")
+                plan = result.extras.get("plan")
+                if plan:
+                    console.print(str(plan), markup=False)
+                if result.error:
+                    console.print(result.error, markup=False)
+                if result.sha256:
+                    console.print(f"sha256: {result.sha256}")
+        except KeyboardInterrupt:
+            reporter.stop()
+            raise
 
 
 @app.command()

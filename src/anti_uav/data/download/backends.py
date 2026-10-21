@@ -24,18 +24,27 @@ Design points that matter in practice:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import BinaryIO, cast
 
-from ...config.schema import DatasetSpec, DownloadSource, Modality, SourceKind
-from ...utils.io import dir_size_bytes, extract_any, human_bytes, require_free_space, sha256_file
+from ...config.schema import DatasetSpec, Modality, SourceKind
+from ...utils.io import (
+    dir_size_bytes,
+    extract_any,
+    human_bytes,
+    require_free_space,
+    sha256_file,
+)
 from ...utils.logging import get_logger
 from ...utils.paths import dataset_root
+from ...utils.progress import NullProgress, ProgressReporter
 
 log = get_logger(__name__)
 
@@ -113,8 +122,10 @@ class DownloadBackend(ABC):
         failure message names the missing credential instead of a stack trace."""
 
     @abstractmethod
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
-        ...
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
+        """Fetch the plan. ``progress`` is optional: library callers pass none."""
 
     # -- shared helpers ----------------------------------------------------- #
 
@@ -139,41 +150,270 @@ class DownloadBackend(ABC):
 # --------------------------------------------------------------------------- #
 
 
+#: Git's ``--progress`` lines. It rewrites the same line with ``\r`` when the
+#: sink is a terminal, so the reader splits on both carriage return and newline.
+#: A line looks like::
+#:
+#:     Receiving objects:  73% (12/16), 8.41 GiB | 6.21 MiB/s
+#:     Resolving deltas: 100% (5/5), done.
+#:
+#: The phase name is greedy on purpose: "Receiving objects" and "Updating files"
+#: both have to survive as one label rather than being split on the space.
+_GIT_PROGRESS = re.compile(
+    r"^(?P<phase>[A-Za-z][A-Za-z ]*?):\s+(?P<percent>\d+)%\s+"
+    r"\((?P<done>\d+)/(?P<total>\d+)\)"
+    r"(?:,\s+(?P<size>[\d.]+\s*[KMGTP]?i?B))?"
+    r"(?:\s+\|\s+(?P<speed>[\d.]+\s*[KMGTP]?i?B/s))?"
+)
+
+#: Archive suffixes a mirror may ship the payload as, instead of a frame tree.
+_ARCHIVE_SUFFIXES = (
+    ".zip",
+    ".tar",
+    ".tar.gz",
+    ".tgz",
+    ".tar.xz",
+    ".txz",
+    ".tar.bz2",
+)
+
+
+def _is_archive(path: Path) -> bool:
+    return path.is_file() and path.name.lower().endswith(_ARCHIVE_SUFFIXES)
+
+
 class GitBackend(DownloadBackend):
-    """Shallow clone. MAV-VID's Bitbucket mirror is a plain git repo of images."""
+    """Shallow clone, with live progress and archive unpacking.
+
+    The original assumption - "MAV-VID's Bitbucket mirror is a plain git repo of
+    images" - was wrong for the surviving copy: that repository holds exactly one
+    file, an 11.5 GB ``mav_vid_dataset.zip``. Two problems followed from it.
+
+    * ``subprocess.run(capture_output=True)`` swallowed every byte of git's
+      progress until the transfer finished, so an 11.5 GB clone looked hung.
+    * Nothing ever opened the zip. The clone returned the *directory* as the
+      payload, the orchestrator only extracts when the result is a *file*, and
+      the converter then found no images.
+
+    So this backend streams ``--progress`` into the reporter, and when the clone
+    turns out to be an archive rather than a frame tree, it extracts it and
+    promotes the frames into the dataset root. The ``.git`` directory is removed
+    afterwards; keeping a second 11.5 GB copy of the payload in a pack file is
+    the opposite of clean.
+    """
 
     def available(self) -> tuple[bool, str]:
         if shutil.which("git") is None:
             return False, "git is not on PATH"
         return True, ""
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
-        import time
-
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
+        reporter = progress or NullProgress()
         started = time.monotonic()
         target = plan.destination / "repo"
-        if (target / ".git").is_dir() or any(target.iterdir() if target.exists() else []):
+        plan.destination.mkdir(parents=True, exist_ok=True)
+
+        if self._payload_already_present(plan):
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "skipped",
-                path=target, duration_s=0.0,
-                error="repo directory already populated",
+                path=plan.destination, duration_s=0.0,
+                error="payload already present",
             )
 
-        target.parent.mkdir(parents=True, exist_ok=True)
-        cmd = ["git", "clone", "--depth", "1", plan.url, str(target)]
+        cmd = [
+            "git",
+            "clone",
+            "--depth",
+            "1",
+            "--single-branch",
+            "--no-tags",
+            "--progress",
+            plan.url,
+            str(target),
+        ]
         log.info("cloning", extra={"dataset": plan.dataset, "url": plan.url})
-        completed = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
-        if completed.returncode != 0:
+
+        reporter.begin(f"git clone {plan.dataset}")
+        returncode, tail = self._run_streaming(cmd, reporter, plan.dataset)
+        if returncode != 0:
+            reporter.end(description=f"git clone {plan.dataset}", detail="failed")
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "failed",
                 duration_s=time.monotonic() - started,
-                error=f"git clone exited {completed.returncode}: {completed.stderr[-400:]}",
+                error=f"git clone exited {returncode}: {tail[-400:]}",
             )
+
         size = dir_size_bytes(target)
+        try:
+            payload, extracted_from = self._settle_payload(plan, target, reporter)
+        except Exception as exc:
+            reporter.end(description=f"git clone {plan.dataset}", detail="unpack failed")
+            return DownloadResult(
+                plan.dataset, plan.variant, plan.source_label, "failed",
+                path=target, bytes_downloaded=size,
+                duration_s=time.monotonic() - started,
+                error=f"cloned, but unpacking failed: {type(exc).__name__}: {exc}",
+            )
+
+        reporter.end(description=f"git clone {plan.dataset}", detail=human_bytes(size))
         return DownloadResult(
             plan.dataset, plan.variant, plan.source_label, "completed",
-            path=target, bytes_downloaded=size, duration_s=time.monotonic() - started,
+            path=payload, bytes_downloaded=size,
+            duration_s=time.monotonic() - started,
+            extras={"repo": str(target), "extracted_from": extracted_from},
         )
+
+    # -- helpers ------------------------------------------------------------ #
+
+    @staticmethod
+    def _payload_already_present(plan: DownloadPlan) -> bool:
+        """A finished clone, or already-unpacked frames, means there is nothing to do."""
+        for split in ("train", "val", "valid", "validation"):
+            candidate = plan.destination / split
+            if candidate.is_dir() and any(candidate.rglob("*")):
+                return True
+        repo = plan.destination / "repo"
+        return repo.is_dir() and any(repo.iterdir())
+
+    @staticmethod
+    def _run_streaming(
+        cmd: list[str],
+        reporter: ProgressReporter,
+        dataset: str,
+    ) -> tuple[int, str]:
+        """Run git, forwarding ``--progress`` lines to the reporter.
+
+        Reading with ``read1`` matters: a text-mode ``readline`` blocks until a
+        newline, and git redraws progress with ``\\\\r`` when stderr is a pipe, so
+        the bar would stay still for the whole transfer and then jump.
+        """
+        env = dict(os.environ)
+        # A private mirror that suddenly wants a password would otherwise hang
+        # forever with no output. Fail instead of waiting on an invisible prompt.
+        env["GIT_TERMINAL_PROMPT"] = "0"
+
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        assert proc.stderr is not None
+        stderr = cast("BinaryIO", proc.stderr)
+        tail: list[str] = []
+        buffer = ""
+
+        def consume(line: str) -> None:
+            stripped = line.strip()
+            if not stripped:
+                return
+            matched = _GIT_PROGRESS.match(stripped)
+            if matched:
+                size = matched.group("size") or ""
+                speed = matched.group("speed") or ""
+                detail = "  ".join(part for part in (size, speed) if part)
+                reporter.update(
+                    float(matched.group("percent")),
+                    detail=detail,
+                    description=f"git clone {dataset} ({matched.group('phase').strip().lower()})",
+                )
+                return
+            tail.append(stripped)
+            if len(tail) > 40:
+                tail.pop(0)
+
+        try:
+            while True:
+                chunk = stderr.read1(1 << 14)
+                if not chunk:
+                    break
+                buffer += chunk.decode("utf-8", "replace")
+                while True:
+                    cuts = [pos for pos in (buffer.find("\r"), buffer.find("\n")) if pos != -1]
+                    if not cuts:
+                        break
+                    cut = min(cuts)
+                    line, buffer = buffer[:cut], buffer[cut + 1 :]
+                    consume(line)
+            if buffer:
+                consume(buffer)
+        except KeyboardInterrupt:
+            proc.terminate()
+            raise
+
+        proc.wait()
+        return proc.returncode, "\n".join(tail)
+
+    def _settle_payload(
+        self,
+        plan: DownloadPlan,
+        target: Path,
+        reporter: ProgressReporter,
+    ) -> tuple[Path, str | None]:
+        """Leave the frames where the converter expects them.
+
+        Returns ``(payload_path, archive_name)``. A mirror that really does ship
+        an image tree is left alone; one that ships a single archive is extracted
+        into the dataset root and its ``.git`` pack is deleted.
+        """
+        archives = sorted(
+            (p for p in target.rglob("*") if _is_archive(p)),
+            key=lambda p: p.stat().st_size,
+            reverse=True,
+        )
+        has_frames = any(
+            p.suffix.lower() in {".jpg", ".jpeg", ".png"} for p in target.rglob("*") if p.is_file()
+        )
+        if has_frames or not archives:
+            return target, None
+
+        archive = archives[0]
+        if archive.name.lower().endswith((".zip", ".tar", ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2")):
+            log.info(
+                "unpacking clone",
+                extra={"dataset": plan.dataset, "archive": archive.name},
+            )
+            reporter.begin(f"unpack {archive.name}")
+            destination = plan.destination / "_extracted"
+            extract_any(archive, destination)
+            frames = self._promote_extracted(destination, plan.destination)
+            reporter.end(description=f"unpack {archive.name}", detail=f"{frames:,} files")
+
+        # The pack duplicated the archive; the frames are the payload now.
+        shutil.rmtree(target, ignore_errors=True)
+        return plan.destination, archive.name
+
+    @staticmethod
+    def _promote_extracted(extracted: Path, destination: Path) -> int:
+        """Flatten a single archive wrapper directory into the dataset root.
+
+        Zips habitually contain one top-level folder (``mav_vid_dataset/``).
+        Leaving it in place is what made the converter miss ``train/`` and fall
+        back to guessing splits from perceptual hashes, so it is flattened here.
+        """
+        root = extracted
+        while True:
+            children = list(root.iterdir())
+            split_like = any(
+                p.is_dir() and p.name.lower() in {"train", "val", "valid", "validation", "test"}
+                for p in children
+            )
+            if split_like or len(children) != 1 or not children[0].is_dir():
+                break
+            root = children[0]
+
+        moved = 0
+        for child in sorted(root.iterdir()):
+            count = sum(1 for _ in child.rglob("*") if _.is_file()) if child.is_dir() else 1
+            out = destination / child.name
+            if out.exists():
+                out = out.with_name(f"{out.name}__from_archive")
+            shutil.move(str(child), str(out))
+            moved += count
+        shutil.rmtree(extracted, ignore_errors=True)
+        return moved
 
 
 class KaggleBackend(DownloadBackend):
@@ -258,21 +498,25 @@ class KaggleBackend(DownloadBackend):
             "no API equivalent."
         )
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
-        import time
-
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
         started = time.monotonic()
+        reporter = progress or NullProgress()
         plan.destination.mkdir(parents=True, exist_ok=True)
         cmd = ["kaggle", "datasets", "download", "-d", plan.url, "-p", str(plan.destination), "--unzip"]
         log.info("kaggle download", extra={"dataset": plan.dataset, "ref": plan.url})
+        reporter.begin(f"kaggle {plan.dataset}")
         completed = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
         if completed.returncode != 0:
+            reporter.end(description=f"kaggle {plan.dataset}", detail="failed")
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "failed",
                 duration_s=time.monotonic() - started,
                 error=f"kaggle exited {completed.returncode}: {completed.stderr[-400:]}",
             )
         size = dir_size_bytes(plan.destination)
+        reporter.end(description=f"kaggle {plan.dataset}", detail=human_bytes(size))
         return DownloadResult(
             plan.dataset, plan.variant, plan.source_label, "completed",
             path=plan.destination, bytes_downloaded=size, duration_s=time.monotonic() - started,
@@ -291,12 +535,15 @@ class GdriveBackend(DownloadBackend):
             return False, "gdown not installed - pip install 'anti-uav[download]'"
         return True, ""
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
         import time
 
         import gdown
 
         started = time.monotonic()
+        reporter = progress or NullProgress()
         plan.destination.mkdir(parents=True, exist_ok=True)
         existing = self._already_have(plan, "*.zip")
         if existing is not None:
@@ -307,6 +554,7 @@ class GdriveBackend(DownloadBackend):
             )
 
         require_free_space(plan.destination, plan.approx_bytes, context=plan.source_label)
+        reporter.begin(f"gdrive {plan.dataset}")
 
         part = plan.destination / (Path(plan.url).name or "download.zip.part")
         final = part.with_suffix("").with_suffix(".zip")
@@ -329,12 +577,14 @@ class GdriveBackend(DownloadBackend):
                 resume=True,
             )
         except Exception as exc:  # noqa: BLE001 - gdown raises bare exceptions
+            reporter.end(description=f"gdrive {plan.dataset}", detail="failed")
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "failed",
                 duration_s=time.monotonic() - started, error=f"{type(exc).__name__}: {exc}",
             )
 
         if path is None:
+            reporter.end(description=f"gdrive {plan.dataset}", detail="nothing downloaded")
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "failed",
                 duration_s=time.monotonic() - started,
@@ -348,6 +598,7 @@ class GdriveBackend(DownloadBackend):
         promoted = self._promote(Path(landed), final)
         digest = sha256_file(promoted)
         size = promoted.stat().st_size
+        reporter.end(description=f"gdrive {plan.dataset}", detail=human_bytes(size))
         return DownloadResult(
             plan.dataset, plan.variant, plan.source_label, "completed",
             path=promoted, bytes_downloaded=size, sha256=digest,
@@ -367,10 +618,11 @@ class ModelScopeBackend(DownloadBackend):
             return False, "modelscope not installed - pip install 'anti-uav[download]'"
         return True, ""
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
-        import time
-
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
         started = time.monotonic()
+        reporter = progress or NullProgress()
         plan.destination.mkdir(parents=True, exist_ok=True)
         try:
             from modelscope.hub.snapshot_download import snapshot_download
@@ -381,17 +633,21 @@ class ModelScopeBackend(DownloadBackend):
             )
 
         log.info("modelscope snapshot", extra={"dataset": plan.dataset, "repo": plan.url})
+        reporter.begin(f"modelscope {plan.dataset}")
         try:
             path = snapshot_download(plan.url, local_dir=str(plan.destination))
         except Exception as exc:  # noqa: BLE001
+            reporter.end(description=f"modelscope {plan.dataset}", detail="failed")
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "failed",
                 duration_s=time.monotonic() - started, error=f"{type(exc).__name__}: {exc}",
             )
 
+        size = dir_size_bytes(path)
+        reporter.end(description=f"modelscope {plan.dataset}", detail=human_bytes(size))
         return DownloadResult(
             plan.dataset, plan.variant, plan.source_label, "completed",
-            path=Path(path), bytes_downloaded=dir_size_bytes(path),
+            path=Path(path), bytes_downloaded=size,
             duration_s=time.monotonic() - started,
         )
 
@@ -436,9 +692,9 @@ class BaiduBackend(DownloadBackend):
             "  (RGB frames + gt_rgb for ~150 sequences is ~12 GB instead of 400 GB)."
         )
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
-        import time
-
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
         started = time.monotonic()
         ok, reason = self.available()
         if not ok:
@@ -484,7 +740,9 @@ class ManualBackend(DownloadBackend):
     def available(self) -> tuple[bool, str]:
         return True, ""
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
         return DownloadResult(
             plan.dataset, plan.variant, plan.source_label, "manual",
             error=(
@@ -529,12 +787,15 @@ class HttpBackend(DownloadBackend):
     def available(self) -> tuple[bool, str]:
         return True, ""
 
-    def fetch(self, plan: DownloadPlan) -> DownloadResult:
+    def fetch(
+        self, plan: DownloadPlan, progress: ProgressReporter | None = None
+    ) -> DownloadResult:
         import time
 
         import requests  # type: ignore[import-untyped]
 
         started = time.monotonic()
+        reporter = progress or NullProgress()
         plan.destination.mkdir(parents=True, exist_ok=True)
         name = plan.url.rstrip("/").split("/")[-1] or "download.bin"
         part = plan.destination / f"{name}.part"
@@ -549,6 +810,7 @@ class HttpBackend(DownloadBackend):
             )
 
         require_free_space(plan.destination, plan.approx_bytes, context=plan.source_label)
+        reporter.begin(f"http {name}")
 
         try:
             with requests.get(plan.url, stream=True, timeout=60, allow_redirects=True) as response:
@@ -557,6 +819,10 @@ class HttpBackend(DownloadBackend):
                 total = int(response.headers.get("content-length", 0))
                 mode = "ab" if part.exists() else "wb"
                 written = part.stat().st_size if mode == "ab" else 0
+                reporter.update(
+                    (written / total * 100.0) if total else None,
+                    detail=f"{human_bytes(written)} / {human_bytes(total)}" if total else human_bytes(written),
+                )
 
                 # Pull the first chunk before opening the file, so the HTML check
                 # runs before anything is written and the chunk is still ours to
@@ -572,6 +838,7 @@ class HttpBackend(DownloadBackend):
                 content_type = response.headers.get("content-type", "").lower()
                 if "html" in content_type or _looks_like_html(first):
                     part.unlink(missing_ok=True)
+                    reporter.end(description=f"http {name}", detail="rejected: HTML page")
                     return DownloadResult(
                         plan.dataset, plan.variant, plan.source_label, "failed",
                         duration_s=time.monotonic() - started,
@@ -589,16 +856,28 @@ class HttpBackend(DownloadBackend):
                     if first:
                         handle.write(first)
                         written += len(first)
+                        if total:
+                            reporter.update(
+                                min(100.0, written / total * 100.0),
+                                detail=f"{human_bytes(written)} / {human_bytes(total)}",
+                            )
                     for chunk in chunks:
                         handle.write(chunk)
                         written += len(chunk)
+                        if total:
+                            reporter.update(
+                                min(100.0, written / total * 100.0),
+                                detail=f"{human_bytes(written)} / {human_bytes(total)}",
+                            )
         except Exception as exc:  # noqa: BLE001
+            reporter.end(description=f"http {name}", detail=f"failed: {type(exc).__name__}")
             return DownloadResult(
                 plan.dataset, plan.variant, plan.source_label, "failed",
                 duration_s=time.monotonic() - started, error=f"{type(exc).__name__}: {exc}",
             )
 
         promoted = self._promote(part, final)
+        reporter.end(description=f"http {name}", detail=human_bytes(promoted.stat().st_size))
         return DownloadResult(
             plan.dataset, plan.variant, plan.source_label, "completed",
             path=promoted, bytes_downloaded=promoted.stat().st_size,
@@ -686,8 +965,14 @@ def download(
     dry_run: bool = False,
     max_sequences: int | None = None,
     modalities: list[Modality] | None = None,
+    progress: ProgressReporter | None = None,
 ) -> Iterator[DownloadResult]:
-    """Fetch a dataset from every matching source, yielding one result each."""
+    """Fetch a dataset from every matching source, yielding one result each.
+
+    ``progress`` is threaded through to whichever backend runs, so a single bar
+    in the CLI covers git, HTTP, gdown and Kaggle without each of them growing a
+    UI of its own. Library callers omit it and get a silent no-op.
+    """
     plans = plan_for(
         spec,
         variant=variant,
@@ -719,7 +1004,7 @@ def download(
             )
             continue
 
-        result = backend.fetch(plan)
+        result = backend.fetch(plan, progress)
         if result.ok and extract and result.path is not None and result.path.is_file():
             dest = plan.destination / "extracted"
             try:
