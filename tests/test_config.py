@@ -43,11 +43,32 @@ class TestSettings:
 
 
 class TestRegistry:
-    def test_all_four_datasets_present(self) -> None:
+    def test_all_eight_datasets_present(self) -> None:
         registry = load_registry()
-        assert set(registry.aliases) == {"dvb", "mavvid", "antiuav", "mmuav"}
+        assert set(registry.aliases) == {
+            "dvb",
+            "mavvid",
+            "antiuav",
+            "mmuav",
+            "kaggle_cybersimar",
+            "github_maciullo",
+            "hf_seraphim",
+            "kaggle_banderastepan",
+        }
 
-    @pytest.mark.parametrize("alias", ["dvb", "mavvid", "antiuav", "mmuav"])
+    @pytest.mark.parametrize(
+        "alias",
+        [
+            "dvb",
+            "mavvid",
+            "antiuav",
+            "mmuav",
+            "kaggle_cybersimar",
+            "github_maciullo",
+            "hf_seraphim",
+            "kaggle_banderastepan",
+        ],
+    )
     def test_dataset_has_a_source(self, alias: str) -> None:
         spec = load_dataset(alias)
         assert spec.sources, f"{alias} has no download source"
@@ -68,17 +89,32 @@ class TestRegistry:
             assert spec.default_variant is None
             assert not spec.variants
 
-    @pytest.mark.parametrize("alias", ["dvb", "mavvid", "antiuav", "mmuav"])
+    @pytest.mark.parametrize(
+        "alias",
+        [
+            "dvb",
+            "mavvid",
+            "antiuav",
+            "mmuav",
+            "kaggle_cybersimar",
+            "github_maciullo",
+            "hf_seraphim",
+            "kaggle_banderastepan",
+        ],
+    )
     def test_median_target_is_recorded(self, alias: str) -> None:
         """Tiling keys off this number, so it cannot be optional."""
         assert load_dataset(alias).median_target_px > 0
 
-    def test_only_dvb_and_mavvid_carry_bird_negatives(self) -> None:
+    def test_only_three_sources_carry_bird_negatives(self) -> None:
+        """`github_maciullo` joined `dvb` and `mavvid` as the third bird-negative
+        source. The other five are drone-only, so their precision numbers cannot
+        falsify a false-positive claim - the tooling says so on their rows."""
         registry = load_registry()
         with_birds = {
             a for a in registry.aliases if registry.get(a).has_bird_negatives
         }
-        assert with_birds == {"dvb", "mavvid"}
+        assert with_birds == {"dvb", "mavvid", "github_maciullo"}
 
     def test_unified_label_order_is_drone_then_bird(self) -> None:
         registry = load_registry()
@@ -88,24 +124,31 @@ class TestRegistry:
 
 
 class TestMatrix:
-    def test_two_models_and_seven_combos(self) -> None:
+    def test_two_models_and_fourteen_combos(self) -> None:
         matrix = load_matrix()
         assert len(matrix.models) == 2
-        assert len(matrix.combos) == 7
+        assert len(matrix.combos) == 14
 
     def test_n_runs_is_models_times_combos(self) -> None:
         matrix = load_matrix()
         assert matrix.n_runs == len(matrix.models) * len(matrix.combos)
-        assert matrix.n_runs == 14
+        assert matrix.n_runs == 28
 
     def test_tiling_threshold_is_set(self) -> None:
         """If this is 0, nothing tiles and MM-UAV's 12 px targets are invisible."""
         assert 0 < load_matrix().tiling_threshold_px < 100
 
-    def test_all4_contains_every_dataset(self) -> None:
+    def test_all4_contains_the_original_four(self) -> None:
+        """`all4` is the pre-existing production combo, kept alongside `all8` so
+        the four new sources are evaluated as an addition, not a replacement."""
         matrix = load_matrix()
         all4 = next(c for c in matrix.combos if c.slug == "all4")
         assert set(all4.datasets) == {"dvb", "mavvid", "antiuav", "mmuav"}
+
+    def test_all8_contains_every_dataset(self) -> None:
+        matrix = load_matrix()
+        all8 = next(c for c in matrix.combos if c.slug == "all8")
+        assert set(all8.datasets) == set(load_registry().aliases)
 
 
 class TestRecipes:

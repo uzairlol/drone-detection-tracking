@@ -41,12 +41,12 @@
 
 .PARAMETER Combos
     Comma list of combo slugs to build and train, or "all".
-    Default: all4 - the candidate production model. Building all seven copies
-    every frame seven times, so ask for "all" only when you mean to run the whole
+    Default: all8 - the candidate production model. Building all fourteen copies
+    every frame fourteen times, so ask for "all" only when you mean to run the whole
     matrix and have the disk for it.
 
 .PARAMETER Models
-    Comma list of model families. Default: yolo11n,rtdetr_x2 (all 14 runs).
+    Comma list of model families. Default: yolo11n,rtdetr_x2 (all 28 runs).
 
 .PARAMETER Stage
     Run exactly one stage and exit. For iterating on a single step.
@@ -79,7 +79,7 @@
     Show the whole plan and exit. Nothing is downloaded, built or trained.
 
 .EXAMPLE
-    .\scripts\run_pipeline.ps1 -Profile pascal -Combos all4
+    .\scripts\run_pipeline.ps1 -Profile pascal -Combos all8
     The full chain for the production candidate on a GTX 1070 box.
 
 .EXAMPLE
@@ -98,8 +98,8 @@
 param(
     [ValidateSet("pascal", "ampere", "ada", "blackwell", "cpu", "auto")]
     [string] $Profile = "auto",
-    [string] $Datasets = "dvb,mavvid,antiuav,mmuav",
-    [string] $Combos = "all4",
+    [string] $Datasets = "dvb,mavvid,antiuav,mmuav,kaggle_cybersimar,github_maciullo,hf_seraphim,kaggle_banderastepan",
+    [string] $Combos = "all8",
     [string] $Models = "yolo11n,rtdetr_x2",
     [string] $Stage,
     [string] $From,
@@ -599,9 +599,9 @@ if ($failed.Count -eq 0) {
     Write-Host "  every requested stage completed." -ForegroundColor Green
     Write-Host ""
     Write-Host "Next:" -ForegroundColor Green
-    Write-Host "  anti-uav evaluate   --run artifacts/runs/yolo11n/all4 --cross"
-    Write-Host "  anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav"
-    Write-Host "  anti-uav replay     --run artifacts/runs/yolo11n/all4 --dataset mmuav --sequence 0007"
+    Write-Host "  anti-uav evaluate   --run artifacts/runs/yolo11n/all8 --cross"
+    Write-Host "  anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav"
+    Write-Host "  anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence 0007"
     Write-Host "  anti-uav serve"
     exit 0
 }

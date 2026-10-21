@@ -232,17 +232,30 @@ class TestApi:
         response = client.get("/api/datasets")
         assert response.status_code == 200
         datasets = {d["alias"]: d for d in response.json()}
-        assert set(datasets) == {"dvb", "mavvid", "antiuav", "mmuav"}
+        assert set(datasets) == {
+            "dvb",
+            "mavvid",
+            "antiuav",
+            "mmuav",
+            "kaggle_cybersimar",
+            "github_maciullo",
+            "hf_seraphim",
+            "kaggle_banderastepan",
+        }
         assert not datasets["antiuav"]["has_bird_negatives"]
         assert not datasets["mmuav"]["has_bird_negatives"]
+        assert not datasets["kaggle_cybersimar"]["has_bird_negatives"]
+        assert not datasets["hf_seraphim"]["has_bird_negatives"]
+        assert not datasets["kaggle_banderastepan"]["has_bird_negatives"]
         assert datasets["dvb"]["has_bird_negatives"]
         assert datasets["mavvid"]["has_bird_negatives"]
+        assert datasets["github_maciullo"]["has_bird_negatives"]
 
-    def test_matrix_has_fourteen_untrained_cells(self, client: TestClient) -> None:
+    def test_matrix_has_twenty_eight_untrained_cells(self, client: TestClient) -> None:
         response = client.get("/api/matrix")
         assert response.status_code == 200
         body = response.json()
-        assert len(body["cells"]) == 14
+        assert len(body["cells"]) == 28
         assert all(cell["map50"] is None for cell in body["cells"]), (
             "an untrained cell must report null, never 0"
         )

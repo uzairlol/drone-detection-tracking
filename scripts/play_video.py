@@ -2,8 +2,8 @@
 
     python scripts/play_video.py data/unlabeled/bird_clips/video_2.mp4
     python scripts/play_video.py clip.mp4 --tracker botsort --conf 0.25
-    python scripts/play_video.py "D:\Drone" --random            # random clip, loops folder until quit
-    python scripts/play_video.py "D:\Drone"                     # plays every clip in order, loops until quit
+    python scripts/play_video.py "D:/Drone" --random     # random clip, loops folder until quit
+    python scripts/play_video.py "D:/Drone"              # plays every clip in order, loops until quit
 
 Barebones on purpose: a window, boxes, and a text strip. No UI framework.
 
@@ -149,14 +149,27 @@ def main() -> int:
             frame_no = 0
             cached = None
 
-            def present(canvas: FrameResult, frame, frame_no: int, infer_ms: float, total_frames: int):
+            def present(
+                canvas: FrameResult,
+                frame,
+                frame_no: int,
+                infer_ms: float,
+                total_frames: int,
+                # Bound here rather than read from the enclosing scope: these are
+                # per-video values, and a closure that captured the loop
+                # variable would read whatever the *next* iteration set. The
+                # function is redefined each time so it would still be correct
+                # today, but that is a coincidence, not a guarantee.
+                scale: float = effective_scale,
+                fps: float = source_fps,
+            ):
                 """Draw, show, and pump the keyboard. Returns False to quit."""
                 nonlocal played, paused, stride
                 for det in canvas.detections:
                     running[det.class_name] += 1
                 view = overlay(frame, canvas, colors=BGR)
-                if effective_scale != 1.0:
-                    view = cv2.resize(view, None, fx=effective_scale, fy=effective_scale)
+                if scale != 1.0:
+                    view = cv2.resize(view, None, fx=scale, fy=scale)
                 draw_hud(
                     view,
                     frame_no=frame_no,
@@ -167,12 +180,12 @@ def main() -> int:
                     counts=Counter(d.class_name for d in canvas.detections),
                     running=running,
                     tracks=len(canvas.tracks),
-                    source_fps=source_fps,
+                    source_fps=fps,
                 )
                 cv2.imshow(window, view)
                 played += 1
 
-                delay = 1.0 / source_fps if not paused else 0.0
+                delay = 1.0 / fps if not paused else 0.0
                 if delay:
                     time.sleep(max(0.0, delay - (time.perf_counter() - play_start) / max(1, played)))
 

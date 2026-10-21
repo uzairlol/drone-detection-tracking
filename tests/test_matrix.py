@@ -36,8 +36,8 @@ class TestShorthandExpansion:
         assert _names(models=["all"]) == _names()
 
     def test_both_expand_to_the_full_matrix(self, matrix) -> None:
-        # 2 families x 7 enabled combos.
-        assert len(_names(combos=["all"], models=["all"])) == 14
+        # 2 families x 14 enabled combos.
+        assert len(_names(combos=["all"], models=["all"])) == 28
 
     def test_explicit_list_still_narrows(self, matrix) -> None:
         assert _names(combos=["dvb", "all4"]) == ["yolo11n__dvb", "rtdetr_x2__dvb"] or set(
