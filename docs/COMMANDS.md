@@ -70,13 +70,17 @@ Always `--dry-run` first. Two of these datasets are 60 GB and 400 GB.
 anti-uav download --dataset all --dry-run          # what would happen, sizes, credentials
 anti-uav download --dataset dvb
 anti-uav download --dataset mavvid
+anti-uav download --dataset github_maciullo       # public git clone, no credentials
+anti-uav download --dataset hf_seraphim           # public HF snapshot, no credentials
+anti-uav download --dataset kaggle_cybersimar
+anti-uav download --dataset kaggle_banderastepan
 anti-uav download --dataset antiuav --variant 300
 anti-uav download --dataset mmuav --max-sequences 150 --modalities rgb
 ```
 
 | flag | effect |
 | --- | --- |
-| `--dataset` | `dvb`, `mavvid`, `antiuav`, `mmuav`, or `all` |
+| `--dataset` | `dvb`, `mavvid`, `antiuav`, `mmuav`, `kaggle_cybersimar`, `github_maciullo`, `hf_seraphim`, `kaggle_banderastepan`, or `all` |
 | `--variant` | `300` / `410` / `600` for Anti-UAV; ignored for the single-release datasets |
 | `--source` | pick one distribution channel when a dataset has several |
 | `--dry-run` | print plans and touch nothing |
@@ -88,6 +92,11 @@ interactive captcha; the command reports `needs_credentials` and prints the shar
 link and extraction code instead of failing obscurely. Fetch it with the official
 client, then re-run with `--skip-download`.
 
+**The two credential-free sources.** `github_maciullo` is a public git clone and
+`hf_seraphim` is a public HuggingFace snapshot, so neither needs a token. If a
+download fails on missing credentials, check *which* source it was first — the
+three Kaggle-hosted datasets do need `kaggle.json`.
+
 ---
 
 ## 2. Preprocessing
@@ -95,9 +104,9 @@ client, then re-run with `--skip-download`.
 ```powershell
 anti-uav convert --dataset all        # normalise into the interim frame index
 anti-uav stats   --dataset all        # per-dataset stats + bird-negative table
-anti-uav splits  --combo all4         # assign whole SEQUENCES to train/val
-anti-uav build   --combo all4         # materialise a YOLO dataset
-anti-uav sanity  --combo all4         # invariants; non-zero exit means do not train
+anti-uav splits  --combo all8         # assign whole SEQUENCES to train/val
+anti-uav build   --combo all8         # materialise a YOLO dataset
+anti-uav sanity  --combo all8         # invariants; non-zero exit means do not train
 anti-uav dedup   --dataset mmuav      # pHash near-duplicates across the split
 ```
 
@@ -117,7 +126,7 @@ Build per combo, not per dataset — the combos are what you train on:
 ```powershell
 anti-uav build --combo dvb
 anti-uav build --combo dvb+mavvid
-anti-uav build --combo all4
+anti-uav build --combo all8
 ```
 
 ---
@@ -135,7 +144,7 @@ anti-uav matrix run --models yolo11n --combos dvb --profile turing   # Kaggle T4
 Or one cell at a time. The flag is `--combo`, not `--dataset`:
 
 ```powershell
-anti-uav train --model yolo11n --combo all4 --epochs 120
+anti-uav train --model yolo11n --combo all8 --epochs 120
 anti-uav train --model rtdetr_x2 --combo dvb --dry-run
 ```
 
@@ -152,9 +161,9 @@ failure tells you which source caused it.
 
 ```powershell
 anti-uav list-runs
-anti-uav evaluate --run artifacts/runs/yolo11n/all4
-anti-uav evaluate --run artifacts/runs/yolo11n/all4 --cross       # the table worth reading
-anti-uav evaluate --run artifacts/runs/yolo11n/all4 --cross --cross-datasets all4
+anti-uav evaluate --run artifacts/runs/yolo11n/all8
+anti-uav evaluate --run artifacts/runs/yolo11n/all8 --cross       # the table worth reading
+anti-uav evaluate --run artifacts/runs/yolo11n/all8 --cross --cross-datasets dvb,mavvid,github_maciullo
 ```
 
 `--cross` scores the run against **each dataset's held-out split separately**,
@@ -163,15 +172,17 @@ learn MM-UAV's 12 px targets. A single combined mAP hides that.
 
 The evaluator adds a falsifiability note: for `antiuav` and `mmuav`, precision
 cannot falsify a false-positive claim because neither contains bird annotations.
-It is printed with the number rather than left for you to remember.
+It is printed with the number rather than left for you to remember. Three rows
+say the opposite — `dvb`, `mavvid` and `github_maciullo` — and those are the
+rows worth reading.
 
 ### Tracking and replay
 
 ```powershell
-anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav
-anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav --trackers sort,bytetrack,botsort
-anti-uav replay     --run artifacts/runs/yolo11n/all4 --dataset mmuav --variant subset
-anti-uav replay     --run artifacts/runs/yolo11n/all4 --dataset mmuav --sequence 0007 --tracker bytetrack
+anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav
+anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav --trackers sort,bytetrack,botsort
+anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --variant subset
+anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence 0007 --tracker bytetrack
 ```
 
 - `track-eval` **scores** trackers against MOT ground truth (MOTA, IDF1, HOTA,
@@ -187,9 +198,9 @@ anti-uav replay     --run artifacts/runs/yolo11n/all4 --dataset mmuav --sequence
 ### Single predictions
 
 ```powershell
-anti-uav predict --run artifacts/runs/yolo11n/all4 --source clip.mp4
-anti-uav predict --run artifacts/runs/yolo11n/all4 --source frame.jpg --save out/ --tracker botsort
-anti-uav predict --run artifacts/runs/yolo11n/all4 --source clip.mp4 --stride 2 --max-frames 300
+anti-uav predict --run artifacts/runs/yolo11n/all8 --source clip.mp4
+anti-uav predict --run artifacts/runs/yolo11n/all8 --source frame.jpg --save out/ --tracker botsort
+anti-uav predict --run artifacts/runs/yolo11n/all8 --source clip.mp4 --stride 2 --max-frames 300
 ```
 
 `--tracker` uses this project's own trackers, not ultralytics' — see
@@ -202,7 +213,7 @@ completely different situations.
 ## 5. Export and deploy
 
 ```powershell
-anti-uav export --run artifacts/runs/yolo11n/all4 --formats onnx,tensorrt --fp16
+anti-uav export --run artifacts/runs/yolo11n/all8 --formats onnx,tensorrt --fp16
 anti-uav deploy render --output artifacts/deploy --rtsp-host 10.0.0.5 --engine ./model.engine
 anti-uav deploy render --node node-00          # one node only, while iterating
 ```
@@ -286,8 +297,8 @@ Two properties make it worth using rather than pasting the list:
   `build_report.json` has `ok: true`, `weights/best.pt` exists. Re-run after an
   interruption and it picks up where it stopped.
 
-`-Combos` defaults to `all4`, not `all`: building all seven combos copies every
-frame seven times. Ask for `all` only when you mean to run the whole matrix and
+`-Combos` defaults to `all8`, not `all`: building all fourteen combos copies every
+frame fourteen times. Ask for `all` only when you mean to run the whole matrix and
 have the disk for it.
 
 `scripts/train_matrix.ps1` still exists for training alone. Use `run_pipeline.ps1`
