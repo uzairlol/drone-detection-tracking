@@ -1,16 +1,19 @@
 # ---------------------------------------------------------------------------
 # Experiment matrix - every run this project intends to produce.
 #
-# 2 model families x 7 dataset combos = 14 runs, plus cross-dataset evaluation
-# (train on each combo, test on each of the four datasets) for the benchmark
+# 2 model families x 14 dataset combos = 28 runs, plus cross-dataset evaluation
+# (train on each combo, test on each of the eight datasets) for the benchmark
 # table.
 #
-# Why these 7 combos:
-#   1-4  single-dataset runs isolate each source's difficulty and contribution
-#   5    drone+bird union (the two sources with real bird negatives)
-#   6    + Anti-UAV: adds a second resolution, a second modality and official
-#        visibility flags
-#   7    everything: the candidate production model
+# Why these 14 combos:
+#   1-8   single-dataset runs isolate each source's difficulty and contribution
+#   9     drone+bird union (the two original bird-negative sources)
+#   10    + github_maciullo: the third bird-negative source
+#   11    + Anti-UAV: adds a second resolution, a second modality and official
+#         visibility flags
+#   12    all three bird-negative sources plus Anti-UAV
+#   13    the original four sources (dvb, mavvid, antiuav, mmuav)
+#   14    everything: the candidate production model
 #
 # Tiling is decided PER DATASET, not per combo: a dataset is tiled when its
 # median_target_px <= tiling_threshold_px. Tiling the whole dvb+mavvid combo
@@ -30,7 +33,7 @@ default_imgsz: 640
 tiling_threshold_px: 40
 
 cross_dataset_eval: true
-cross_eval_datasets: [dvb, mavvid, antiuav, mmuav]
+cross_eval_datasets: [dvb, mavvid, antiuav, mmuav, kaggle_cybersimar, github_maciullo, hf_seraphim, kaggle_banderastepan]
 
 seed: 0
 
@@ -90,6 +93,48 @@ combos:
       combo with a warning if data/interim/mmuav is absent, so the rest of the
       matrix still runs.
 
+  - slug: kaggle_cybersimar
+    datasets: [kaggle_cybersimar]
+    description: >-
+      Kaggle cybersimar08 drone detection alone. Small curated drone-only set.
+    force_tiling: false
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      DRONE-ONLY. Small dataset (~8.5k frames) for quick validation. No bird
+      negatives - precision cannot falsify false-positive claims.
+
+  - slug: github_maciullo
+    datasets: [github_maciullo]
+    description: >-
+      GitHub Maciullo DroneDetectionDataset alone. Drone + bird annotations.
+    force_tiling: false
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      GitHub-hosted with both drone and bird classes. Has bird negatives for
+      falsifiable precision, but smaller frame count than dvb/mavvid.
+
+  - slug: hf_seraphim
+    datasets: [hf_seraphim]
+    description: >-
+      HuggingFace Seraphim drone detection alone. Drone-only, medium targets.
+    force_tiling: false
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      DRONE-ONLY. HuggingFace-hosted, no auth needed. No bird negatives.
+
+  - slug: kaggle_banderastepan
+    datasets: [kaggle_banderastepan]
+    description: >-
+      Kaggle banderastepan drone detection alone. Larger drone-only set.
+    force_tiling: false
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      DRONE-ONLY. Larger Kaggle dataset (~20k frames). No bird negatives.
+
   # -- cumulative ------------------------------------------------------------
   - slug: dvb+mavvid
     datasets: [dvb, mavvid]
@@ -104,6 +149,18 @@ combos:
       whether a single detector can hold both. Expect a small mAP drop vs each
       dataset alone, which is the scale effect rather than a real regression.
 
+  - slug: birds3
+    datasets: [dvb, mavvid, github_maciullo]
+    description: >-
+      All three bird-negative sources combined (dvb, mavvid, github_maciullo).
+    force_tiling: null
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      Three bird-negative sources for maximum bird-rejection training.
+      Per-dataset tiling applies. The slug is short on purpose - the combo
+      table is width-budgeted and a source list does not fit in a column.
+
   - slug: dvb+mavvid+antiuav
     datasets: [dvb, mavvid, antiuav]
     description: >-
@@ -116,11 +173,34 @@ combos:
       aug.ir_grayscale_probability is raised here so the detector cannot use
       palette as a shortcut for modality.
 
+  - slug: birds3+antiuav
+    datasets: [dvb, mavvid, github_maciullo, antiuav]
+    description: >-
+      All bird-negative sources plus Anti-UAV IR modality.
+    force_tiling: null
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      Bird-negatives from dvb, mavvid, github_maciullo plus Anti-UAV IR.
+
   - slug: all4
     datasets: [dvb, mavvid, antiuav, mmuav]
     description: >-
-      All four sources. Candidate production model. Two modalities, three target
-      scales, both bird-positive and bird-negative data.
+      The original four sources. Two modalities, three target scales, both
+      bird-positive and bird-negative data.
+    force_tiling: null
+    force_imgsz: 640
+    enabled: true
+    notes: >-
+      The pre-existing production combo. Kept alongside all8 so the four new
+      sources can be evaluated as an addition rather than as a replacement -
+      the two rows together say whether the extra data helped.
+
+  - slug: all8
+    datasets: [dvb, mavvid, antiuav, mmuav, kaggle_cybersimar, github_maciullo, hf_seraphim, kaggle_banderastepan]
+    description: >-
+      All eight sources. Candidate production model. Two modalities, multiple
+      target scales, both bird-positive and bird-negative data.
     force_tiling: null
     force_imgsz: 640
     enabled: true
