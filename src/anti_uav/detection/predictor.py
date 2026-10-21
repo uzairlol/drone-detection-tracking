@@ -331,7 +331,6 @@ class Detector:
             "iou": self.iou,
             "imgsz": self.imgsz,
             "device": self.device,
-            "half": self.half,
             "verbose": False,
         }
         kwargs.update(overrides)
@@ -353,12 +352,16 @@ class Detector:
         try:
             xyxy = boxes.xyxy.cpu().numpy()
             confs = boxes.conf.cpu().numpy()
-            classes = boxes.ids.cpu().numpy() if hasattr(boxes, "ids") else None
+            # `cls` is the class index; `ids` is the TRACK id and is a different
+            # axis entirely. Reading class ids from `boxes.ids` meant every
+            # detection inherited a track id - 0 when tracking was off - so
+            # `class_name` resolved to class 0 and *every bird was reported as a
+            # drone*. That is the exact failure the rule layer exists to prevent,
+            # and it was invisible because ultralytics computes its own metrics
+            # during `val`, which never goes through this conversion.
+            classes = boxes.cls.cpu().numpy()
         except (AttributeError, RuntimeError):  # pragma: no cover
             return []
-
-        if classes is None:
-            classes = np.zeros(len(confs), dtype=int)
 
         out: list[Detection] = []
         for index in range(len(confs)):
