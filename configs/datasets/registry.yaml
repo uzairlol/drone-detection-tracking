@@ -389,3 +389,236 @@ datasets:
       - >-
         Baidu Pan throttles aggressively and will interrupt multi-GB transfers.
         Budget several attempts.
+
+  # ----------------------------------------------------------------------- #
+  kaggle_cybersimar:
+    alias: kaggle_cybersimar
+    display_name: Kaggle Drone Detection (cybersimar08)
+    homepage: https://www.kaggle.com/datasets/cybersimar08/drone-detection
+    paper: ""
+    license: CC0-1.0 (verify on Kaggle page)
+    citation: ""
+    modalities: [rgb]
+    variants: []
+    default_variant: null
+    approx_sequences: 50
+    approx_frames: 8500
+    median_target_px: 64
+    has_bird_negatives: false
+    has_track_ids: false
+    has_multi_object_identity: false
+    has_visibility_flags: false
+    official_metric: null
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {drone: drone, uav: drone, "0": drone}
+      ignore_labels: []
+
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+
+    sources:
+      - kind: kaggle
+        url: cybersimar08/drone-detection
+        label: Kaggle - cybersimar08/drone-detection
+        approx_size_gb: 2.5
+        needs_credentials: true
+        notes: >-
+          Needs a free Kaggle account and `~/.kaggle/kaggle.json`.
+          Images with YOLO-format annotations.
+
+    ingest:
+      stride: 1
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      Small curated drone-only dataset from Kaggle. Useful for quick validation
+      runs but lacks bird negatives - cannot falsify false-positive claims.
+
+    caveats:
+      - >-
+        NO BIRD NEGATIVES. Drone-only dataset, so validation precision here
+        cannot falsify a false-positive claim.
+
+  # ----------------------------------------------------------------------- #
+  github_maciullo:
+    alias: github_maciullo
+    display_name: DroneDetectionDataset (Maciullo)
+    homepage: https://github.com/Maciullo/DroneDetectionDataset
+    paper: ""
+    license: MIT (verify in repo)
+    citation: ""
+    modalities: [rgb]
+    variants: []
+    default_variant: null
+    approx_sequences: 30
+    approx_frames: 12000
+    median_target_px: 80
+    has_bird_negatives: true
+    has_track_ids: false
+    has_multi_object_identity: false
+    has_visibility_flags: false
+    official_metric: null
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {drone: drone, bird: bird, uav: drone, "0": drone, "1": bird}
+      ignore_labels: []
+
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+
+    sources:
+      - kind: github
+        url: https://github.com/Maciullo/DroneDetectionDataset
+        label: GitHub - Maciullo/DroneDetectionDataset
+        approx_size_gb: 3.0
+        needs_credentials: false
+        notes: >-
+          Public GitHub repo with drone and bird annotations. Cloned directly
+          without authentication - the lowest-friction source in the matrix.
+
+    ingest:
+      stride: 1
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      GitHub-hosted dataset with both drone and bird classes. Smaller than dvb
+      but provides bird negatives for falsifying false-positive claims.
+
+    caveats:
+      - >-
+        Smaller frame count than dvb/mavvid. Bird class ratio should be verified
+        during conversion.
+
+  # ----------------------------------------------------------------------- #
+  hf_seraphim:
+    alias: hf_seraphim
+    display_name: Seraphim Drone Detection (HuggingFace)
+    homepage: https://huggingface.co/datasets/lgrzybowski/seraphim-drone-detection-dataset
+    paper: ""
+    license: CC-BY-4.0 (verify on HF page)
+    citation: ""
+    modalities: [rgb]
+    variants: []
+    default_variant: null
+    approx_sequences: 40
+    approx_frames: 15000
+    median_target_px: 72
+    has_bird_negatives: false
+    has_track_ids: false
+    has_multi_object_identity: false
+    has_visibility_flags: false
+    official_metric: null
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {drone: drone, uav: drone, "0": drone}
+      ignore_labels: []
+
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+
+    sources:
+      - kind: hf
+        url: lgrzybowski/seraphim-drone-detection-dataset
+        label: HuggingFace - lgrzybowski/seraphim-drone-detection-dataset
+        approx_size_gb: 4.0
+        needs_credentials: false
+        notes: >-
+          The `url` is a repo id, not a URL - `kind: hf` resolves it through the
+          hub's snapshot API. A plain GET of the landing page returns HTML, not
+          the payload. No auth required for public datasets.
+
+    ingest:
+      stride: 1
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      HuggingFace-hosted drone detection dataset. Drone-only (no bird negatives),
+      useful for additional drone training data.
+
+    caveats:
+      - >-
+        NO BIRD NEGATIVES. Drone-only dataset, so validation precision here
+        cannot falsify a false-positive claim.
+
+  # ----------------------------------------------------------------------- #
+  kaggle_banderastepan:
+    alias: kaggle_banderastepan
+    display_name: Kaggle Drone Detection (banderastepan)
+    homepage: https://www.kaggle.com/datasets/banderastepan/drone-detection
+    paper: ""
+    license: CC0-1.0 (verify on Kaggle page)
+    citation: ""
+    modalities: [rgb]
+    variants: []
+    default_variant: null
+    approx_sequences: 60
+    approx_frames: 20000
+    median_target_px: 56
+    has_bird_negatives: false
+    has_track_ids: false
+    has_multi_object_identity: false
+    has_visibility_flags: false
+    official_metric: null
+
+    classes:
+      unified_labels: [drone, bird]
+      mapping: {drone: drone, uav: drone, "0": drone}
+      ignore_labels: []
+
+    group:
+      pattern: 'frames/(?P<sequence>[^/]+)'
+      group: 1
+
+    sources:
+      - kind: kaggle
+        url: banderastepan/drone-detection
+        label: Kaggle - banderastepan/drone-detection
+        approx_size_gb: 5.0
+        needs_credentials: true
+        notes: >-
+          Needs a free Kaggle account and `~/.kaggle/kaggle.json`.
+          Dataset includes a `dataset` subfolder - select it in download.
+
+    ingest:
+      stride: 1
+      max_frames_per_sequence: null
+      start_frame: 0
+      image_format: jpg
+      jpeg_quality: 92
+      max_dimension: 1920
+      min_focus_score: null
+      delete_source_video: false
+
+    notes: >-
+      Larger Kaggle drone detection dataset. Drone-only (no bird negatives),
+      provides more drone training variety.
+
+    caveats:
+      - >-
+        NO BIRD NEGATIVES. Drone-only dataset, so validation precision here
+        cannot falsify a false-positive claim.
