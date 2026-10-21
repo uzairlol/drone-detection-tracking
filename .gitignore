@@ -1,4 +1,4 @@
-# ---------------------------------------------------------------- datasets --
+# --------------------------------------------------------------- datasets --
 # Everything under data/ and artifacts/ is reproducible from configs/ + scripts.
 #
 # Note the pattern shape: `data/**` ignores the payloads, and the `!data/**/`
@@ -15,6 +15,10 @@ data/**/*.tar*
 data/**/*.mp4
 data/**/*.avi
 data/**/*.npy
+
+# Drone/Bird clip folders (local test data, not part of the repo)
+Drone/
+Bird/
 
 # --------------------------------------------------------------- artifacts --
 # Same shape as data/ above: ignore the output, keep the placeholder docs.
