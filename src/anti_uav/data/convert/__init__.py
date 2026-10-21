@@ -17,6 +17,12 @@ from .base import ConversionAborted, Converter
 from .dvb import DvbConverter, DvbFlatConverter, detect_layout as detect_dvb_layout
 from .mavvid import MavVidConverter
 from .mmuav import MmUavConverter
+from .yolo_pairs import (
+    GitHubMaciulloConverter,
+    HfSeraphimConverter,
+    KaggleBanderastepanConverter,
+    KaggleCybersimarConverter,
+)
 
 log = get_logger(__name__)
 
@@ -25,6 +31,10 @@ CONVERTERS: dict[str, type[Converter]] = {
     "dvb": DvbConverter,
     "mavvid": MavVidConverter,
     "mmuav": MmUavConverter,
+    "kaggle_cybersimar": KaggleCybersimarConverter,
+    "github_maciullo": GitHubMaciulloConverter,
+    "hf_seraphim": HfSeraphimConverter,
+    "kaggle_banderastepan": KaggleBanderastepanConverter,
 }
 
 #: Datasets whose published layout has changed shape across mirrors. The
@@ -86,6 +96,10 @@ __all__ = [
     "Converter",
     "DvbConverter",
     "DvbFlatConverter",
+    "GitHubMaciulloConverter",
+    "HfSeraphimConverter",
+    "KaggleBanderastepanConverter",
+    "KaggleCybersimarConverter",
     "MavVidConverter",
     "MmUavConverter",
     "convert_dataset",

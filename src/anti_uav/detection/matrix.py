@@ -258,9 +258,6 @@ def capability_report(aliases: tuple[str, ...] | None = None) -> str:
     import textwrap
 
     from ..data.capabilities import (
-        CLAIM_IDENTITY,
-        CLAIM_PRECISION,
-        CLAIM_TRACKING,
         combo_capabilities,
         source_capabilities_for,
     )
@@ -269,19 +266,20 @@ def capability_report(aliases: tuple[str, ...] | None = None) -> str:
     wanted = tuple(aliases) if aliases else tuple(registry.aliases)
 
     lines: list[str] = ["", "WHAT EACH SOURCE CAN PROVE", "=" * 60]
-    lines.append(
-        f"{'source':<9}{'median':>8}{'tiled':>7}{'birds':>7}{'identity':>10}{'trackGT':>9}"
-    )
-    lines.append("-" * 60)
+    source_rows: list[tuple[str, ...]] = []
     for alias in wanted:
         c = source_capabilities_for(alias)
-        lines.append(
-            f"{c.alias:<9}{int(c.median_target_px or 0):>7}px"
-            f"{(str(c.tile_size) if c.requires_tiling else '-'):>7}"
-            f"{('yes' if c.can_falsify_precision else 'NO'):>7}"
-            f"{('yes' if c.can_score_identity else 'NO'):>10}"
-            f"{('yes' if c.can_score_tracking else 'NO'):>9}"
+        source_rows.append(
+            (
+                c.alias,
+                f"{int(c.median_target_px or 0)}px",
+                str(c.tile_size) if c.requires_tiling else "-",
+                "yes" if c.can_falsify_precision else "NO",
+                "yes" if c.can_score_identity else "NO",
+                "yes" if c.can_score_tracking else "NO",
+            )
         )
+    lines.extend(_render_table(("source", "median", "tiled", "birds", "identity", "trackGT"), source_rows))
     lines.append("")
     for text in (
         "birds    precision here can falsify a false-positive claim",
@@ -291,20 +289,11 @@ def capability_report(aliases: tuple[str, ...] | None = None) -> str:
         lines.append(f"  {text}")
 
     lines.extend(["", "PER-COMBO CLAIMS", "=" * 60])
-    header = f"{'combo':<21}{'birds':<11}{'identity':<10}{'trackGT':<16}{'tiled':<10}"
-    lines.append(header)
-    lines.append("-" * len(header.rstrip()))
-    for spec in load_matrix().combos:
-        caps = combo_capabilities(spec.slug, tuple(spec.datasets))
-        lines.append(
-            f"{spec.slug:<21}{_names(caps, CLAIM_PRECISION):<11}"
-            f"{_names(caps, CLAIM_IDENTITY):<10}{_names(caps, CLAIM_TRACKING):<16}"
-            f"{','.join(caps.tiled_sources) or '-':<10}"
-        )
+    lines.extend(_combo_claims_table())
     lines.append("")
     lines.extend(
         textwrap.wrap(
-            "A combo inherits a claim from its sources: all4 can falsify false "
+            "A combo inherits a claim from its sources: all8 can falsify false "
             "positives because dvb and mavvid are in it. That says nothing about "
             "how either behaved alone - read the per-dataset table for that.",
             width=76,
@@ -330,6 +319,101 @@ def capability_report(aliases: tuple[str, ...] | None = None) -> str:
                 )
             )
     return "\n".join(lines)
+
+
+#: Hard budget for a table line. The report is printed through a Rich console
+#: that hard-wraps at the terminal width, and a wrapped capability table is
+#: worse than none - so a row that will not fit is abbreviated, not truncated
+#: mid-word.
+_LINE_BUDGET = 78
+
+
+def _render_table(
+    headers: tuple[str, ...],
+    rows: list[tuple[str, ...]],
+) -> list[str]:
+    """Render a table whose column widths come from the content.
+
+    Fixed-width columns stop working the moment an alias gets longer than its
+    slot: the row silently shifts and the columns stop lining up. Sizing from
+    the content keeps the table readable, and the caller is responsible for
+    keeping the result inside the console width.
+    """
+    widths = [
+        max(len(headers[i]), *(len(row[i]) for row in rows)) if rows else len(headers[i])
+        for i in range(len(headers))
+    ]
+    separator = "  "
+    out = [
+        separator.join(h.ljust(w) for h, w in zip(headers, widths, strict=True)).rstrip()
+    ]
+    out.append("-" * len(out[0]))
+    for row in rows:
+        out.append(
+            separator.join(c.ljust(w) for c, w in zip(row, widths, strict=True)).rstrip()
+        )
+    return out
+
+
+def _combo_claims_table() -> list[str]:
+    """The per-combo claims table, sized to fit the console width.
+
+    Column widths come from the content rather than being fixed, because the
+    alias lists grew: three bird-negative sources means ``dvb,mavvid,
+    github_maciullo`` in one cell, which a hard-coded 11-column slot cannot
+    hold. If even the adaptive table will not fit, the alias lists are
+    abbreviated - the per-source table above already names every source in
+    full, so the abbreviation loses no information a reader can act on.
+    """
+    from ..data.capabilities import (
+        CLAIM_IDENTITY,
+        CLAIM_PRECISION,
+        CLAIM_TRACKING,
+        combo_capabilities,
+    )
+
+    headers = ("combo", "birds", "identity", "trackGT", "tiled")
+    rows: list[tuple[str, ...]] = []
+    for spec in load_matrix().combos:
+        caps = combo_capabilities(spec.slug, tuple(spec.datasets))
+        rows.append(
+            (
+                spec.slug,
+                _names(caps, CLAIM_PRECISION),
+                _names(caps, CLAIM_IDENTITY),
+                _names(caps, CLAIM_TRACKING),
+                ",".join(caps.tiled_sources) or "-",
+            )
+        )
+
+    for abbreviate in (False, True):
+        rendered = [
+            tuple(_abbreviate_aliases(cell) for cell in row) if abbreviate else row
+            for row in rows
+        ]
+        widths = [
+            max(len(headers[i]), *(len(row[i]) for row in rendered))
+            for i in range(len(headers))
+        ]
+        if sum(widths) + 2 * (len(widths) - 1) <= _LINE_BUDGET:
+            break
+
+    return _render_table(headers, rendered)
+
+
+def _abbreviate_aliases(cell: str) -> str:
+    """``dvb,mavvid,github_maciullo`` -> ``dvb,mav,ghb``.
+
+    Only used as a fallback when the full table will not fit the console
+    width. Every alias is also spelled out in full in the per-source table
+    above, so this shortens the reading without hiding a source.
+    """
+    if "," not in cell:
+        return cell
+    parts = cell.split(",")
+    if all(len(p) <= 4 for p in parts):
+        return cell
+    return ",".join(p[:3] for p in parts)
 
 
 def _names(caps: Any, claim: str) -> str:

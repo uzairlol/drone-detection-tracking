@@ -1,29 +1,31 @@
 """What each source dataset is allowed to prove.
 
-Four public datasets do not support the same conclusions, and the differences are
+Eight public datasets do not support the same conclusions, and the differences are
 not cosmetic:
 
-===========  ==================  =============  ==================
-source       falsify FP claims?  identity?      tiling
-===========  ==================  =============  ==================
-``dvb``      **yes**             no             640 px
-``mavvid``   **yes**             no             none
-``antiuav``  no                  no (1 target)  none
-``mmuav``    no                  **yes**        256 px
-===========  ==================  =============  ==================
+==========  ==================  =============  ==================
+source      falsify FP claims?  identity?      tiling
+==========  ==================  =============  ==================
+``dvb``     **yes**             no             640 px
+``mavvid``  **yes**             no             none
+``maciu``   **yes**             no             none
+``antiuav`` no                  no (1 target)  none
+``mmuav``   no                  **yes**        256 px
+the four YOLO-format community sets: no, no, none
+==========  ==================  =============  ==================
 
-Only ``dvb`` and ``mavvid`` contain birds, so only they can turn a precision
-number into evidence about false positives — a detector that labelled every bird
-as a drone would score perfectly on ``antiuav`` or ``mmuav``. Only ``mmuav`` has
-multi-object identity, so only it makes IDF1 and ID-switch counts mean anything;
-``antiuav`` labels every box id=1, which satisfies a naive "has track ids" check
-while making identity metrics vacuous.
+Only ``dvb``, ``mavvid`` and ``github_maciullo`` contain birds, so only they can
+turn a precision number into evidence about false positives — a detector that
+labelled every bird as a drone would score perfectly on the other five. Only
+``mmuav`` has multi-object identity, so only it makes IDF1 and ID-switch counts
+mean anything; ``antiuav`` labels every box id=1, which satisfies a naive "has
+track ids" check while making identity metrics vacuous.
 
 Those facts were already in ``configs/datasets/registry.yaml`` and were already
 honoured in four separate places — a ``data.yaml`` provenance note, a
 falsifiability string on each ``evaluate --cross`` row, a warning in
 ``track-eval``, and a ``median_target_px`` comparison in ``build``. That works but
-it has the shape of an accident waiting to happen: adding a fifth dataset means
+it has the shape of an accident waiting to happen: adding a ninth dataset means
 remembering four places, and forgetting one is a silent hole rather than a
 failure.
 
