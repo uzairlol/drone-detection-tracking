@@ -30,9 +30,14 @@ print(f"       warnings={health['warnings']}")
 r = client.get("/api/datasets")
 check("GET /api/datasets", r.status_code == 200, f"status {r.status_code}")
 datasets = r.json()
-check("  4 datasets", len(datasets) == 4, f"got {len(datasets)}")
+check("  8 datasets", len(datasets) == 8, f"got {len(datasets)}")
 birdless = [d["alias"] for d in datasets if not d["has_bird_negatives"]]
-check("  drone-only flagged", set(birdless) == {"antiuav", "mmuav"}, str(birdless))
+check(
+    "  drone-only flagged",
+    set(birdless)
+    == {"antiuav", "mmuav", "kaggle_cybersimar", "hf_seraphim", "kaggle_banderastepan"},
+    str(birdless),
+)
 for d in datasets:
     print(f"       {d['alias']:9s} sources={len(d['sources'])} "
           f"median_px={d['median_target_px']} birds={d['has_bird_negatives']}")
@@ -45,7 +50,12 @@ print(f"       {len(runs)} run(s)")
 r = client.get("/api/matrix")
 check("GET /api/matrix", r.status_code == 200, f"status {r.status_code}")
 matrix = r.json()
-check("  14 cells (2 models x 7 combos)", len(matrix["cells"]) == 14, f"got {len(matrix['cells'])}")
+expected_cells = len(matrix["models"]) * len(matrix["combos"])
+check(
+    f"  {expected_cells} cells ({len(matrix['models'])} models x {len(matrix['combos'])} combos)",
+    len(matrix["cells"]) == expected_cells,
+    f"got {len(matrix['cells'])}",
+)
 print(f"       models={matrix['models']}")
 print(f"       combos={matrix['combos']}")
 missing = [c["map50"] for c in matrix["cells"] if c["map50"] is None]

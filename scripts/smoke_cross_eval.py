@@ -1,7 +1,7 @@
 """Cross-dataset evaluation YAML builder, on a synthetic split.
 
 `--cross` is the flag that makes the experiment matrix meaningful (a model
-trained on all four datasets still has to be scored per dataset), and it runs
+trained on all eight datasets still has to be scored per dataset), and it runs
 before any real weights exist, so it is worth proving the path works.
 """
 

@@ -8,7 +8,7 @@
     are asking of it.
 
     It deliberately does NOT create a virtual environment. This project is run
-    on shared workstations and on two supervisor GPU boxes, and a second env per
+    on shared workstations and on two lab GPU boxes, and a second env per
     machine is where dependency drift comes from. Pass -EnvName to choose which
     existing conda env to install into.
 
@@ -52,7 +52,7 @@
     resolution.
 
     The lock deliberately omits torch and torchvision, because one file cannot
-    pin five GPU tiers. -Profile still governs those, so the two work together
+    pin every GPU tier. -Profile still governs those, so the two work together
     rather than conflicting.
 
 .PARAMETER WheelDir

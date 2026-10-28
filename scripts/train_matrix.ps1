@@ -196,8 +196,8 @@ if ($exit -eq 0) {
     Write-Host "Matrix finished in $([math]::Round($elapsed.TotalHours, 2)) h." -ForegroundColor Green
     Write-Host ""
     Write-Host "Next:" -ForegroundColor Green
-    Write-Host "  anti-uav eval --run artifacts/runs/yolo11n/all4 --cross"
-    Write-Host "  anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav"
+    Write-Host "  anti-uav evaluate --run artifacts/runs/yolo11n/yolo11n__all4 --cross"
+    Write-Host "  anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all4 --dataset mmuav"
 }
 else {
     Write-Host "Matrix exited with code $exit after $([math]::Round($elapsed.TotalHours, 2)) h." -ForegroundColor Red

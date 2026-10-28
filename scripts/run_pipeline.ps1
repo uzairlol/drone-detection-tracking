@@ -599,9 +599,9 @@ if ($failed.Count -eq 0) {
     Write-Host "  every requested stage completed." -ForegroundColor Green
     Write-Host ""
     Write-Host "Next:" -ForegroundColor Green
-    Write-Host "  anti-uav evaluate   --run artifacts/runs/yolo11n/all8 --cross"
-    Write-Host "  anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav"
-    Write-Host "  anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence 0007"
+    Write-Host "  anti-uav evaluate   --run artifacts/runs/yolo11n/yolo11n__all8 --cross"
+    Write-Host "  anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav"
+    Write-Host "  anti-uav replay     --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav --sequence 0007"
     Write-Host "  anti-uav serve"
     exit 0
 }

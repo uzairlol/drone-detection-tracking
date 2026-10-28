@@ -2,8 +2,8 @@
 
     python scripts/play_video.py data/unlabeled/bird_clips/video_2.mp4
     python scripts/play_video.py clip.mp4 --tracker botsort --conf 0.25
-    python scripts/play_video.py "D:/Drone" --random     # random clip, loops folder until quit
-    python scripts/play_video.py "D:/Drone"              # plays every clip in order, loops until quit
+    python scripts/play_video.py data/unlabeled/drone_clips --random   # random clip, loops until quit
+    python scripts/play_video.py data/unlabeled/drone_clips            # every clip in order, loops until quit
 
 Barebones on purpose: a window, boxes, and a text strip. No UI framework.
 
