@@ -23,6 +23,7 @@ Design points that matter in practice:
 
 from __future__ import annotations
 
+import io
 import os
 import re
 import shutil
@@ -32,7 +33,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import BinaryIO, cast
+from typing import cast
 
 from ...config.schema import DatasetSpec, Modality, SourceKind
 from ...utils.io import (
@@ -301,7 +302,7 @@ class GitBackend(DownloadBackend):
             env=env,
         )
         assert proc.stderr is not None
-        stderr = cast("BinaryIO", proc.stderr)
+        stderr = cast("io.BufferedReader", proc.stderr)
         tail: list[str] = []
         buffer = ""
 

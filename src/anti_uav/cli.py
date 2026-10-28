@@ -711,7 +711,7 @@ def train(
             if key.startswith("metrics/"):
                 console.print(f"  {key:<26} {value:.4f}")
         console.print(f"\nbest: {result.best_weights}")
-        console.print(f"next: anti-uav eval --run {result.output_dir}")
+        console.print(f"next: anti-uav evaluate --run {result.output_dir}")
         console.print(f"      anti-uav export --run {result.output_dir} --formats onnx,tensorrt")
     else:
         _fail(result.error or "training failed")

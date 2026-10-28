@@ -482,7 +482,7 @@ def format_result(result: ReIdResult) -> str:
         lines.append("")
         lines.append("Use it with:")
         lines.append(
-            f"    anti-uav track-eval --dataset <ds> --reid {result.best_checkpoint}"
+            f"    anti-uav track-eval --run <run> --dataset <ds> --reid {result.best_checkpoint}"
         )
         lines.append(
             "    (omit --reid to pick up the newest artifacts/runs/reid/*/best.pt automatically;"

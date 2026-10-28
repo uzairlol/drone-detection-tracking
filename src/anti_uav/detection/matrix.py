@@ -224,7 +224,7 @@ def summary_table(results: Sequence[TrainingResult]) -> str:
         )
     lines.append("")
     lines.append("NOTE: compare rows only within the same combo. mAP across different")
-    lines.append("      datasets is not comparable - use `anti-uav eval --cross-dataset`.")
+    lines.append("      datasets is not comparable - use `anti-uav evaluate --cross`.")
     lines.append("")
     lines.append("FP claim: which sources in the combo let its precision number count as")
     lines.append("      evidence about false positives. '-' means the precision column on that")

@@ -139,7 +139,7 @@ class TestMatrix:
         assert 0 < load_matrix().tiling_threshold_px < 100
 
     def test_all4_contains_the_original_four(self) -> None:
-        """`all4` is the pre-existing production combo, kept alongside `all8` so
+        """`all4` is the four-source reference combo, kept alongside `all8` so
         the four new sources are evaluated as an addition, not a replacement."""
         matrix = load_matrix()
         all4 = next(c for c in matrix.combos if c.slug == "all4")

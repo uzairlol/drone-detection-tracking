@@ -40,6 +40,9 @@ class ProgressReporter(Protocol):
     def end(self, *, description: str | None = None, detail: str = "") -> None:
         """Finish the task, snapping the bar to 100%."""
 
+    def stop(self) -> None:
+        """Tear down any live display. Safe to call more than once."""
+
 
 class NullProgress:
     """The default sink. Every method is a no-op, so backends never branch."""
@@ -59,6 +62,9 @@ class NullProgress:
         return None
 
     def end(self, *, description: str | None = None, detail: str = "") -> None:
+        return None
+
+    def stop(self) -> None:
         return None
 
 

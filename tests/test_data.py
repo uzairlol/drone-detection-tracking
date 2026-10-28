@@ -147,8 +147,8 @@ class TestStats:
         assert summary.frames > 0
 
     def test_bird_negative_coverage_is_reported(self, converted: Path) -> None:
-        """Two of four datasets can falsify a false-positive claim; the stats
-        output has to say which."""
+        """Only bird-positive datasets can falsify a false-positive claim; the
+        stats output has to say which."""
         by_dataset = {
             "antiuav": stats.compute(
                 load_index("antiuav", "300"), dataset="antiuav", variant="300"

@@ -1,10 +1,10 @@
 """The per-dataset evidential contract.
 
-Four public datasets do not support the same conclusions: only two carry birds, so
-only those can turn a precision number into evidence about false positives, and
+Eight public datasets do not support the same conclusions: only three carry birds,
+so only those can turn a precision number into evidence about false positives, and
 only one has multi-object identity, so only that one makes IDF1 meaningful. Those
 facts live in the registry; this module is the single derivation, and these tests
-pin the derivation so a fifth dataset cannot quietly acquire an unstated exemption.
+pin the derivation so a new dataset cannot quietly acquire an unstated exemption.
 """
 
 from __future__ import annotations
