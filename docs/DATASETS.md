@@ -9,12 +9,12 @@ can and cannot be used to prove.
 ## The one-paragraph version
 
 Five of the eight datasets contain **no birds at all**. They are drone-only
-tracking benchmarks. A model trained on Anti-UAV alone will report excellent
-precision, and that number will mean nothing, because nothing in the training set
-ever resembled a bird. Only Drone-vs-Bird, MAV-VID, and GitHub Maciullo can falsify a
-false-positive claim. This is why the matrix trains on all eleven dataset
-combinations rather than "the best dataset": `dvb` is the one that tests whether
-the detector rejects what it should.
+detection and tracking datasets. A model trained on Anti-UAV alone will report
+excellent precision, and that number will mean nothing, because nothing in the
+training set ever resembled a bird. Only Drone-vs-Bird, MAV-VID, and GitHub
+Maciullo can falsify a false-positive claim. This is why the matrix trains on all
+fourteen dataset combinations rather than "the best dataset": `dvb` is the one
+that tests whether the detector rejects what it should.
 
 The other structural fact is target size. Median targets run from 28 px
 (Drone-vs-Bird) down to **12 px** (MM-UAV). At a 640 px input a 12 px drone
@@ -37,8 +37,8 @@ per-combo.
 | `hf_seraphim` | HuggingFace (Seraphim) | RGB | 15,000 | 40 | 72 px | no | no | no | 4 GB |
 | `kaggle_banderastepan` | Kaggle (banderastepan) | RGB | 20,000 | 60 | 56 px | no | no | no | 5 GB |
 
-The last two columns are what decide which conclusions each source can support,
-and they are different questions:
+The `birds` and `identity` columns decide which conclusions each source can
+support, and they are different questions:
 
 - **birds** — can precision here falsify a false-positive claim? Only `dvb`,
   `mavvid`, and `github_maciullo` answer yes. A detector that labelled every bird
@@ -54,9 +54,14 @@ and they are different questions:
 `anti-uav matrix list`, `evaluate --cross`, the `track-eval` gate, and
 `GET /api/capabilities`.
 
-Total if you take everything: ~480 GB extracted. The recommended subset is ~155 GB
-(Anti-UAV300 + Drone-vs-Bird + MAV-VID + GitHub Maciullo + ~150 MM-UAV sequences + the three Kaggle/HF drone sets). Check your volume
-first — `anti-uav verify-env` does it for you.
+Total if you take everything: ~475 GB extracted. A working subset — Anti-UAV300,
+Drone-vs-Bird, MAV-VID, GitHub Maciullo, ~150 MM-UAV sequences, and the three
+small Kaggle/HuggingFace drone-only sets — is roughly **105 GB**. Check your
+volume first; `anti-uav verify-env` does it for you.
+
+> **Status at handover:** raw data is not committed. The local `data/` tree
+> contains a partial DVB download (~9 GB) and its converted frames; treat it as a
+> working copy, not the full eight-dataset corpus.
 
 ---
 
@@ -64,14 +69,14 @@ first — `anti-uav verify-env` does it for you.
 
 Every dataset slot already exists as an empty directory with a `README.md`
 explaining what belongs in it, how big it is, whether it needs credentials, and
-the exact command that fills it. They are the fastest way to answer "what was I
-supposed to put here" — read the file rather than reconstructing it.
+the exact command that fills it. They are the fastest way to answer "what belongs
+here" — read the file rather than reconstructing it.
 
 ```
 data/raw/<dataset>/<variant>/README.md          what the download produces
 data/raw/_credentials/README.md                which datasets need auth, and how
 data/interim/<dataset>/<variant>/README.md     what convert writes, and how to read it
-data/processed/README.md                        the seven combo directories
+data/processed/README.md                        the fourteen combo directories
 data/manifests/README.md                        observed vs published figures
 ```
 
@@ -222,90 +227,6 @@ anti-uav download --dataset mmuav --max-sequences 150 --modalities rgb
 
 ---
 
-## Two things that will silently corrupt your results
-
-### 1. Frame-level splits leak
-
-Every dataset here is video-derived, so adjacent frames are near-identical. Split
-by frame and the same target's near-duplicates land on both sides; mAP inflates by
-double digits and means nothing.
-
-The project splits **by sequence**, always, and `anti-uav sanity` fails the build
-if any sequence appears in two splits. A frame-level split exists for genuinely
-frame-independent data and warns loudly when used:
-
-```powershell
-anti-uav splits --combo all8 --strategy sequence   # the default, and the only correct one here
-```
-
-### 2. Near-duplicates across datasets
-
-Datasets overlap: the same site, the same event, sometimes the same frames
-re-extracted at a different stride. `anti-uav dedup` uses pHash to find them.
-
-```powershell
-anti-uav dedup --dataset mmuav
-```
-
----
-
-## Harmonisation
-
-All four are normalised into one interim frame index under
-`data/interim/<dataset>/<variant>/` with `frames/` and `labels/`, and then into the
-unified label space:
-
-```
-0 = drone
-1 = bird
-```
-
-The ordering is fixed and asserted by the test suite. Class order is not
-cosmetic: it is baked into every trained checkpoint and every exported engine.
-
-Converters report what they saw rather than silently guessing:
-
-- `antiuav`: `target` / `0` both mean drone. Different challenge releases label
-  the same object differently; the converter records which spelling it saw.
-- `dvb`: bare integers mapped as above, with a class-ratio cross-check.
-- Unknown labels are counted and reported, never dropped in silence.
-
----
-
-## Disk planning
-
-| what | where | size |
-| --- | --- | --- |
-| raw downloads | `data/raw/` | up to 460 GB (subset plan: ~92 GB) |
-| interim frame index | `data/interim/` | ~0.9x raw for frames, labels are small |
-| processed YOLO datasets | `data/processed/` | 1x interim per combo, tiled combos are 4–6x |
-| runs, exports, tracks | `artifacts/` | plan 20 GB for all 14 runs |
-
-Tiled combos are the ones to watch: MM-UAV at 256 px tiles produces six tiles per
-frame, so a combo containing it is several times larger than the same combo
-without.
-
-```powershell
-anti-uav verify-env      # reports free space on the data volume
-```
-
----
-
-## References
-
-- Drone-vs-Bird: WOSDETC/AVSS Drone-vs-Bird Detection Challenge
-  (`wosdetc/challenge`)
-- MAV-VID: Cranfield University, Multirotor Aerial Vehicle VID
-- Anti-UAV: INEE, Anti-UAV410 / Anti-UAV600 (publisher states redistribution is
-  restricted)
-- MM-UAV: Tri-Modal Multi-UAV Tracking Benchmark (research use, confirm with the
-  authors)
-
-Licences differ and two of them restrict redistribution. Check before sharing any
-of this data, and before putting it on a machine that leaves the site.
-
----
-
 ## `kaggle_cybersimar` — Kaggle Drone Detection (cybersimar08)
 
 Small curated drone-only dataset from Kaggle.
@@ -366,6 +287,75 @@ Larger Kaggle drone detection dataset.
 ```powershell
 anti-uav download --dataset kaggle_banderastepan --dry-run
 anti-uav download --dataset kaggle_banderastepan          # needs Kaggle credentials
+```
+
+---
+
+## Two things that will silently corrupt your results
+
+### 1. Frame-level splits leak
+
+Every dataset here is video-derived, so adjacent frames are near-identical. Split
+by frame and the same target's near-duplicates land on both sides; mAP inflates by
+double digits and means nothing.
+
+The project splits **by sequence**, always, and `anti-uav sanity` fails the build
+if any sequence appears in two splits. A frame-level split exists for genuinely
+frame-independent data and warns loudly when used:
+
+```powershell
+anti-uav splits --combo all8 --strategy sequence   # the default, and the only correct one here
+```
+
+### 2. Near-duplicates across datasets
+
+Datasets overlap: the same site, the same event, sometimes the same frames
+re-extracted at a different stride. `anti-uav dedup` uses pHash to find them.
+
+```powershell
+anti-uav dedup --dataset mmuav
+```
+
+---
+
+## Harmonisation
+
+All eight are normalised into one interim frame index under
+`data/interim/<dataset>/<variant>/` with `frames/` and `labels/`, and then into the
+unified label space:
+
+```
+0 = drone
+1 = bird
+```
+
+The ordering is fixed and asserted by the test suite. Class order is not
+cosmetic: it is baked into every trained checkpoint and every exported engine.
+
+Converters report what they saw rather than silently guessing:
+
+- `antiuav`: `target` / `0` both mean drone. Different challenge releases label
+  the same object differently; the converter records which spelling it saw.
+- `dvb`: bare integers mapped as above, with a class-ratio cross-check.
+- Unknown labels are counted and reported, never dropped in silence.
+
+---
+
+## Disk planning
+
+| what | where | size |
+| --- | --- | --- |
+| raw downloads | `data/raw/` | up to ~475 GB (recommended subset: ~105 GB) |
+| interim frame index | `data/interim/` | ~0.9x raw for frames, labels are small |
+| processed YOLO datasets | `data/processed/` | 1x interim per combo, tiled combos are 4–6x |
+| runs, exports, tracks | `artifacts/` | plan 20 GB per model across its 14 runs |
+
+Tiled combos are the ones to watch: MM-UAV at 256 px tiles produces six tiles per
+frame, so a combo containing it is several times larger than the same combo
+without.
+
+```powershell
+anti-uav verify-env      # reports free space on the data volume
 ```
 
 ---

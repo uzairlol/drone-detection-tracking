@@ -10,8 +10,11 @@ Read them as two halves of one thing:
 
 | | diagram | question it answers |
 | --- | --- | --- |
-| research | this file | how did we get the weights, and can we trust them? |
+| research | this file | how the weights were produced, and can they be trusted? |
 | deployment | `system block diagram.md` | what runs on site with those weights? |
+
+For the current completion state rather than the intended design, read
+[`../../HANDOVER.md`](../../HANDOVER.md).
 
 Everything below is Mermaid source. It renders in GitHub, VS Code and
 `docs/diagrams/`. To produce SVG/PNG the same way the other diagram's exports
@@ -47,7 +50,7 @@ flowchart TB
     %% ---------------- 2. ACQUIRE ----------------
     subgraph ACQ["2 · ACQUIRE + CONVERT — one interim frame index"]
         DL["download — per-backend<br/>Kaggle · Bitbucket · Google Drive · Baidu Pan<br/>60 GB to 400 GB, --dry-run first"]
-        CV["convert — 4 converters, one output<br/>mp4+JSON · YOLO txt · MOT gt  ->  FrameRecord"]
+        CV["convert — per-dataset converters, one output<br/>mp4+JSON · YOLO txt · MOT gt  ->  FrameRecord"]
         HI["harmonize — one label space<br/>drone = 0, bird = 1<br/>unknown label = ERROR, not a warning<br/>boxes under 2 px dropped"]
         IX["interim tree<br/>frames/ · labels/ · mot/ · index.jsonl"]
     end
@@ -61,7 +64,7 @@ flowchart TB
     end
 
     %% ---------------- 4. TRAIN ----------------
-    subgraph TRAIN["4 · TRAIN — 2 model families x 7 dataset combos = 14 runs"]
+    subgraph TRAIN["4 · TRAIN — 2 model families x 14 dataset combos = 28 runs"]
         MTX["matrix planner<br/>configs/matrix.yaml<br/>single-source runs first, cumulative last"]
         YOLO["yolo11n · 2.6 M params · 120 ep · 640 px<br/>edge candidate — the model that deploys"]
         RTD["rtdetr_x2 · 42.3 M params · 100 ep · 640 px<br/>accuracy reference — NMS-free, num_queries 100"]
@@ -72,12 +75,12 @@ flowchart TB
     %% ---------------- 5. EVALUATE ----------------
     subgraph EVAL["5 · EVALUATE — detection metrics"]
         EV["evaluate — model.val on the val split<br/>P · R · mAP50 · mAP50-95 · fitness<br/>per class AND per size bucket (small/med/large)"]
-        CR["evaluate --cross — train once, test on all four<br/>builds data/processed/_cross/&lt;dataset&gt;/<br/>prints a falsifiability note per row"]
+        CR["evaluate --cross — train once, test on all eight<br/>builds data/processed/_cross/&lt;dataset&gt;/<br/>prints a falsifiability note per row"]
     end
 
     %% ---------------- 6. TRACK ----------------
     subgraph TRACK["6 · TRACK + TRACK-EVAL — identity metrics"]
-        TE["track-eval — the offline detect to track to score harness<br/>needs MOT ground truth, so MM-UAV only"]
+        TE["track-eval — the offline detect to track to score harness<br/>needs MOT ground truth; MM-UAV for identity metrics"]
         TK["three trackers, one association implementation<br/>SORT · ByteTrack · BoT-SORT"]
         ME["metrics — MOTA · IDF1 · HOTA (DetA/AssA)<br/>ID switches · fragmentations · Anti-UAV accuracy"]
         RP["replay — same loop with NO ground truth<br/>the way to see why a specific track breaks"]
@@ -150,7 +153,7 @@ data/interim/<dataset>/<variant>/
 
 ### 2.2 Splits — the one invariant that decides whether your mAP means anything
 
-All four datasets are video-derived. Adjacent frames of a hovering drone are
+All eight datasets are video-derived. Adjacent frames of a hovering drone are
 near-identical, so a frame-level split leaks and inflates mAP by double digits.
 
 ```mermaid
@@ -192,7 +195,7 @@ ruined by it.
 
 1. the dataset's own `tiling_override` — MM-UAV's 256 px window, and it outranks
    everything below, because it is the dataset's own decision about its own frames;
-2. the combo's `force_tiling` — `true`/`false` on the four single-source combos,
+2. the combo's `force_tiling` — `true`/`false` on the eight single-source combos,
    `null` (defer) on the cumulative ones;
 3. the median-size rule, `median_target_px <= 40`.
 
@@ -200,7 +203,7 @@ So "tiling is decided per source, not per combo" is the *intent* — `dvb+mavvid
 tiles `dvb` and leaves `mavvid` alone — while a combo still holds the final say
 for sources that do not declare an override. `data/capabilities.py` follows that
 same precedence, so the capability tables cannot claim a source is untiled while
-`build` tiles it; `tests/test_capabilities.py` asserts it for all seven combos.
+`build` tiles it; `tests/test_capabilities.py` asserts it for all fourteen combos.
 
 Two further decisions worth knowing:
 
@@ -243,8 +246,8 @@ into an independent check that the labels contain what the index claims.
 
 ### 2.5 What each source is allowed to prove
 
-Four public datasets do not support the same conclusions, and the differences are
-not cosmetic. They are the reason `docs/EXPERIMENTS.md` says to read the
+Eight public datasets do not support the same conclusions, and the differences
+are not cosmetic. They are the reason `docs/EXPERIMENTS.md` says to read the
 per-dataset table instead of a combined number.
 
 | source | birds? | median | tiled | MOT GT | identity | visibility |
@@ -253,13 +256,17 @@ per-dataset table instead of a combined number.
 | `mavvid` | **yes** | 171 px | — | no | no | no |
 | `antiuav` | no | 92 px | — | yes | no (1 target) | **yes** |
 | `mmuav` | no | 12 px | 256 | yes | **yes** | no |
+| `kaggle_cybersimar` | no | 64 px | — | no | no | no |
+| `github_maciullo` | **yes** | 80 px | — | no | no | no |
+| `hf_seraphim` | no | 72 px | — | no | no | no |
+| `kaggle_banderastepan` | no | 56 px | — | no | no | no |
 
 Two derivations that are easy to get wrong, and both are pinned by tests:
 
-- **Only `dvb` and `mavvid` carry birds** — not just `dvb`. They are the only two
+- **Only `dvb`, `mavvid` and `github_maciullo` carry birds**. They are the only
   sources that can turn a precision number into evidence about false positives. A
-  detector that labelled every bird as a drone scores perfectly on `antiuav` or
-  `mmuav`, because neither has a bird to misclassify.
+  detector that labelled every bird as a drone scores perfectly on the other five,
+  because none of them has a bird to misclassify.
 - **"Has track ids" is not "has identity".** `antiuav` emits MOT ground truth but
   is **single-target**: every box is id 1. `has_track_ids: true` satisfies a naive
   check while making IDF1 and ID-switch counts vacuous, because every identity
@@ -269,11 +276,11 @@ Two derivations that are easy to get wrong, and both are pinned by tests:
 #### The pipeline does not fork; the claims do
 
 This is the important part, and the reason the project is one pipeline rather than
-four. `build.py` merges N sources into one YOLO dataset (`for alias in
-combo.datasets`), so the cumulative combos and the production model (`all4`) are
-possible at all. Splitting into per-dataset pipelines would delete 3 of the 7 runs
-— including the one you would deploy — and would make the "do the sources
-interfere?" question unanswerable.
+one per source. `build.py` merges N sources into one YOLO dataset (`for alias in
+combo.datasets`), so the cumulative combos and the production model (`all8`) are
+possible at all. Splitting into per-dataset pipelines would delete every
+cumulative combo — including the one you would deploy — and would make the "do
+the sources interfere?" question unanswerable.
 
 What is explicit instead is **what each combo's numbers are allowed to claim**. A
 combo inherits the union of its sources' capabilities:
@@ -292,8 +299,8 @@ flowchart LR
 Before `data/capabilities.py` existed, these facts were honoured in four separate
 places — a `data.yaml` provenance note, a note string on each `--cross` row, a
 warning in `track-eval`, and a `median_target_px` comparison in `build`. That
-worked, but it had the shape of an accident waiting to happen: adding a fifth
-dataset means remembering four places, and forgetting one is a silent hole rather
+worked, but it had the shape of an accident waiting to happen: adding a dataset
+means remembering all four places, and forgetting one is a silent hole rather
 than a failure.
 
 What it gates:
@@ -351,7 +358,7 @@ stack, same export path.
 | `cls` loss weight | 0.5 | 2.0 (focal variant) |
 | `num_queries` | — | 100 |
 | NMS | `true` | `false` — NMS-free by construction |
-| batch | `-1` (auto) | `-1` (auto; halved first if you OOM) |
+| batch | recipe `-1`; profile override pins 8–128 | recipe `-1`; profile override pins 8–24 |
 | early-stop metric | `map50-95` | `map50-95` |
 
 **Why RT-DETR is NMS-free and still feeds the same tracker** — its decoder emits
@@ -372,7 +379,7 @@ early-stops on its internal `fitness` blend and exposes no hook to change that, 
 *judged* on: it is resolved against the `results.csv` column and written to
 `run_metadata.json` as `primary_metric` / `primary_metric_value`.
 
-### 3.1 The experiment matrix — 14 runs
+### 3.1 The experiment matrix — 28 runs
 
 ```mermaid
 flowchart TB
@@ -382,27 +389,43 @@ flowchart TB
         M2["rtdetr_x2<br/>42.3 M params · 100 ep<br/>accuracy reference · NMS-free"]
     end
 
-    subgraph COMBOS["7 dataset combos — planner order, single-source first, cumulative last"]
+    subgraph COMBOS["14 dataset combos — planner order, single-source first, cumulative last"]
         direction LR
         C1["dvb<br/>tiled 640 · BIRD NEG"]
         C2["mavvid<br/>untiled · BIRD NEG"]
         C3["antiuav<br/>untiled · drone only"]
         C4["mmuav<br/>tiled 256 · drone only<br/>+ MOT ground truth"]
-        C5["dvb+mavvid<br/>per-source tiling"]
-        C6["dvb+mavvid+antiuav<br/>first RGB + IR mix"]
-        C7["all4<br/>CANDIDATE PRODUCTION"]
-        C1 --> C5
-        C2 --> C5
-        C5 --> C6
-        C3 --> C6
-        C6 --> C7
-        C4 --> C7
+        C5["kaggle_cybersimar<br/>untiled · drone only"]
+        C6["github_maciullo<br/>untiled · BIRD NEG"]
+        C7["hf_seraphim<br/>untiled · drone only"]
+        C8["kaggle_banderastepan<br/>untiled · drone only"]
+        C9["dvb+mavvid<br/>per-source tiling"]
+        C10["birds3<br/>three bird sources"]
+        C11["dvb+mavvid+antiuav<br/>first RGB + IR mix"]
+        C12["birds3+antiuav<br/>bird rejection + IR"]
+        C13["all4<br/>original four sources"]
+        C14["all8<br/>CANDIDATE PRODUCTION"]
+        C1 --> C9
+        C2 --> C9
+        C9 --> C10
+        C6 --> C10
+        C3 --> C11
+        C10 --> C12
+        C11 --> C12
+        C1 --> C13
+        C2 --> C13
+        C3 --> C13
+        C4 --> C13
+        C13 --> C14
+        C10 --> C14
+        C11 --> C14
+        C12 --> C14
     end
 
-    subgraph GRID["14 runs — a run whose weights/best.pt exists is skipped, so this is resumable"]
+    subgraph GRID["28 runs — a run whose weights/best.pt exists is skipped, so this is resumable"]
         direction LR
-        R1["yolo11n x 7 combos"]
-        R2["rtdetr_x2 x 7 combos"]
+        R1["yolo11n x 14 combos"]
+        R2["rtdetr_x2 x 14 combos"]
     end
 
     M1 --> R1
@@ -413,19 +436,26 @@ flowchart TB
 
 | combo | what it answers |
 | --- | --- |
-| `dvb` | does bird suppression work at all? **the only combo that can falsify a false-positive claim** |
+| `dvb` | does bird suppression work at all? **the cleanest single combo that can falsify a false-positive claim** |
 | `mavvid` | does it transfer to a different capture domain? |
 | `antiuav` | does it track through occlusion, on a second modality? |
 | `mmuav` | does it detect 12 px targets once tiled? |
+| `kaggle_cybersimar` | does it work on a community-curated set? |
+| `github_maciullo` | bird rejection on a third bird-positive source? |
+| `hf_seraphim` | does it work on a hub-hosted distribution? |
+| `kaggle_banderastepan` | does more of the same community data help? |
 | `dvb+mavvid` | is more bird data better? |
+| `birds3` | is three times the bird data better still? |
 | `dvb+mavvid+antiuav` | bird suppression plus occlusion? |
-| `all4` | is the combination worth deploying? |
+| `birds3+antiuav` | bird rejection plus a second modality? |
+| `all4` | is the original combination worth deploying? |
+| `all8` | does the extra data help, and where does it cost? |
 
 Run order matters: the planner puts single-source runs first so a failure shows
 up on the cheapest dataset rather than on the cumulative one.
 
 ```powershell
-anti-uav matrix list                                    # all 14, resolved settings, cost estimate
+anti-uav matrix list                                    # all 28, resolved settings, cost estimate
 anti-uav matrix run --models yolo11n --combos all --dry-run
 .\scripts\train_matrix.ps1 -Profile blackwell            # resumable
 ```
@@ -655,22 +685,27 @@ flowchart LR
 ```
 
 `--cross` is the part that matters, and it does something specific: for each of
-the four datasets it synthesises a **one-source** dataset out of that dataset's
+the eight datasets it synthesises a **one-source** dataset out of that dataset's
 own val frames (`data/processed/_cross/<alias>/`, images hard-linked, not
-copied), then runs `val` on it. One training run, four test sets.
+copied), then runs `val` on it. One training run, eight test sets.
 
 ```
-dataset   map50   map50-95    prec   recall   drone AP_S   bird AP   falsifiable?
-dvb       ...     ...         ...    ...      ...          yes       YES
-mavvid    ...     ...         ...    ...      ...          yes       YES
-antiuav   ...     ...         ...    ...      ...          no        NO
-mmuav     ...     ...         ...    ...      ...          no        NO
+dataset              map50   map50-95    prec   recall   drone AP_S   bird AP   falsifiable?
+dvb                  ...     ...         ...    ...      ...          yes       YES
+mavvid               ...     ...         ...    ...      ...          yes       YES
+github_maciullo      ...     ...         ...    ...      ...          yes       YES
+antiuav              ...     ...         ...    ...      ...          no        NO
+mmuav                ...     ...         ...    ...      ...          no        NO
+kaggle_cybersimar    ...     ...         ...    ...      ...          no        NO
+hf_seraphim          ...     ...         ...    ...      ...          no        NO
+kaggle_banderastepan ...     ...         ...    ...      ...          no        NO
 ```
 
-Three of the four datasets contain **no bird annotations**. Precision measured on
+Five of the eight datasets contain **no bird annotations**. Precision measured on
 them is unfalsifiable — a detector that labels every bird as a drone scores
 perfectly. The evaluator prints that next to the number rather than leaving you
-to remember. Judge false positives only on `dvb` and `mavvid`.
+to remember. Judge false positives only on `dvb`, `mavvid` and
+`github_maciullo`.
 
 Size buckets use normalised `sqrt(area)` at 0.33 / 0.66, matching
 `utils/geometry.py`. `drone AP_S` is the column that says whether tiling worked.

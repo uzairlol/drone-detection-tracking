@@ -16,3 +16,7 @@ built on the target device rather than on the training box.
 
 The rendered configs declare exactly two classes, `drone` and `bird`, matching
 `unified_labels` in `configs/datasets/registry.yaml`.
+
+> **At handover these are rendered configuration files only.** No engine has been
+> built and nothing has been run against live RTSP or on a DeepStream node. See
+> [`../../HANDOVER.md`](../../HANDOVER.md).

@@ -3,6 +3,11 @@
 Written by `anti-uav track-eval` (one summary per dataset/variant) and by
 `anti-uav replay --dump` (one row file per sequence).
 
+> **The JSON files currently in this directory are smoke outputs**, produced on
+> 4–6-frame toy sequences. Their negative MOTA and zero IDF1 are not tracker
+> benchmarks. Regenerate them on real MM-UAV data before quoting any number; see
+> [`../../HANDOVER.md`](../../HANDOVER.md).
+
 ## Row format
 
 `replay --dump <dir>` writes `<dataset>_<sequence>_<tracker>.txt` in the MOT
@@ -17,7 +22,7 @@ predictions.
 
 **This is xyxy, not the MOTChallenge `bb_left,bb_top,bb_width,bb_height`.** It
 matches MM-UAV's own `gt.txt` and matches what `anti-uav convert` writes into
-`data/interim/<dataset>/<variant>/mot/`, so our rows and our converted ground
+`data/interim/<dataset>/<variant>/mot/`, so these rows and the converted ground
 truth are mutually readable by `load_mot_ground_truth`. A toolkit that assumes
 the MOT17 column order will misread these rows — convert the 3rd–6th columns
 first (`w = x2 - x1`, `h = y2 - y1`).

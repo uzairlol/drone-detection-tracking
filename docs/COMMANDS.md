@@ -15,6 +15,10 @@ Substitute your environment's interpreter if `anti-uav` is not on `PATH`:
 & "D:\envs\ml\python.exe" -m anti_uav.cli <command>
 ```
 
+> **At handover only `yolo11n` on `dvb` exists.** Several examples below use an
+> `all8` run you will produce later; substitute the run you actually have, or see
+> [`../HANDOVER.md`](../HANDOVER.md) for the recommended order.
+
 ---
 
 ## 0. Environment
@@ -138,7 +142,7 @@ anti-uav matrix list
 anti-uav matrix run --models yolo11n,rtdetr_x2 --combos all --dry-run
 anti-uav matrix run --models yolo11n --combos all --profile blackwell
 anti-uav matrix run --models yolo11n --combos dvb --profile turing   # Kaggle T4
-.\scripts\train_matrix.ps1 -Profile blackwell          # 14 runs, resumable
+.\scripts\train_matrix.ps1 -Profile blackwell          # 28 runs, resumable
 ```
 
 Or one cell at a time. The flag is `--combo`, not `--dataset`:
@@ -161,9 +165,9 @@ failure tells you which source caused it.
 
 ```powershell
 anti-uav list-runs
-anti-uav evaluate --run artifacts/runs/yolo11n/all8
-anti-uav evaluate --run artifacts/runs/yolo11n/all8 --cross       # the table worth reading
-anti-uav evaluate --run artifacts/runs/yolo11n/all8 --cross --cross-datasets dvb,mavvid,github_maciullo
+anti-uav evaluate --run artifacts/runs/yolo11n/yolo11n__all8
+anti-uav evaluate --run artifacts/runs/yolo11n/yolo11n__all8 --cross       # the table worth reading
+anti-uav evaluate --run artifacts/runs/yolo11n/yolo11n__all8 --cross --datasets dvb,mavvid,github_maciullo
 ```
 
 `--cross` scores the run against **each dataset's held-out split separately**,
@@ -179,14 +183,16 @@ rows worth reading.
 ### Tracking and replay
 
 ```powershell
-anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav
-anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav --trackers sort,bytetrack,botsort
-anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --variant subset
-anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence 0007 --tracker bytetrack
+anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav
+anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav --trackers sort,bytetrack,botsort
+anti-uav replay     --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav --variant subset
+anti-uav replay     --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav --sequence 0007 --tracker bytetrack
 ```
 
 - `track-eval` **scores** trackers against MOT ground truth (MOTA, IDF1, HOTA,
-  ID switches). Needs a dataset with track ids — that means MM-UAV. Detection is
+  ID switches). It needs a dataset with track ids: use MM-UAV for identity
+  metrics. Anti-UAV also has MOT ground truth, but it is single-target, so IDF1
+  and ID switches there are meaningless (the command warns). Detection is
   computed once per sequence and reused across trackers, so comparing three
   trackers is one inference pass, not three. `--reid <ckpt>` selects the
   appearance model explicitly (default: the newest
@@ -198,9 +204,9 @@ anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence
 ### Single predictions
 
 ```powershell
-anti-uav predict --run artifacts/runs/yolo11n/all8 --source clip.mp4
-anti-uav predict --run artifacts/runs/yolo11n/all8 --source frame.jpg --save out/ --tracker botsort
-anti-uav predict --run artifacts/runs/yolo11n/all8 --source clip.mp4 --stride 2 --max-frames 300
+anti-uav predict --run artifacts/runs/yolo11n/yolo11n__all8 --source clip.mp4
+anti-uav predict --run artifacts/runs/yolo11n/yolo11n__all8 --source frame.jpg --save out/ --tracker botsort
+anti-uav predict --run artifacts/runs/yolo11n/yolo11n__all8 --source clip.mp4 --stride 2 --max-frames 300
 ```
 
 `--tracker` uses this project's own trackers, not ultralytics' — see
@@ -213,7 +219,7 @@ completely different situations.
 ## 5. Export and deploy
 
 ```powershell
-anti-uav export --run artifacts/runs/yolo11n/all8 --formats onnx,tensorrt --fp16
+anti-uav export --run artifacts/runs/yolo11n/yolo11n__all8 --formats onnx,tensorrt --fp16
 anti-uav deploy render --output artifacts/deploy --rtsp-host 10.0.0.5 --engine ./model.engine
 anti-uav deploy render --node node-00          # one node only, while iterating
 ```
@@ -289,7 +295,7 @@ verify-env -> fetch-weights -> download -> convert -> stats
 Two properties make it worth using rather than pasting the list:
 
 - **`verify-env` and `sanity` are hard gates.** A non-zero exit from either stops
-  the run there. A 14-run matrix on a box with the wrong torch build, or a
+  the run there. A 28-run matrix on a box with the wrong torch build, or a
   training set with a sequence leaked across the train/val boundary, wastes days
   in ways that are only obvious in hindsight.
 - **It is resumable.** Every stage skips itself when its output already exists —

@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$dir = 'D:\internship block diagram'
+$dir = $PSScriptRoot
 $svgPath = Join-Path $dir 'hr-100-1.svg'
 if (-not (Test-Path -LiteralPath $svgPath)) {
     Write-Output 'svg missing'

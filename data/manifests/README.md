@@ -26,7 +26,7 @@ suspecting the model.
 ## The bird-negative table
 
 `anti-uav stats` prints, per dataset, whether bird negatives exist at all. This
-matters more than it sounds: three of the four datasets are drone-only, so a
+matters more than it sounds: five of the eight datasets are drone-only, so a
 precision number measured on them cannot falsify a false-positive claim. The
 evaluator attaches that caveat to the metric rather than leaving you to remember,
 and this manifest is where you check whether the caveat applies to a run.

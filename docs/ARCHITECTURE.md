@@ -5,7 +5,8 @@ How the pieces fit, and why the non-obvious decisions were made. Read
 the block-level picture of the deployed system, and
 [`diagrams/ml pipeline diagram.md`](diagrams/ml%20pipeline%20diagram.md) for the
 research pipeline that produces the weights it consumes; this file explains the
-choices behind both.
+choices behind both. For the current completion state rather than the intended
+design, read [`../HANDOVER.md`](../HANDOVER.md).
 
 ---
 
@@ -139,15 +140,16 @@ mappings are cross-checked against published statistics, and a mismatch aborts.
 
 ### `data/capabilities.py` — what a run is allowed to claim
 
-Four public datasets do not support the same conclusions. Only `dvb` and `mavvid`
-carry birds, so only they can turn precision into evidence about false positives.
-Only `mmuav` has multi-object identity, so only it makes IDF1 and ID-switch
-counts meaningful — `antiuav` has MOT ground truth but is single-target, which
-satisfies a naive "has track ids" check while making identity metrics vacuous.
+Eight public datasets do not support the same conclusions. Only `dvb`, `mavvid`
+and `github_maciullo` carry birds, so only they can turn precision into evidence
+about false positives. Only `mmuav` has multi-object identity, so only it makes
+IDF1 and ID-switch counts meaningful — `antiuav` has MOT ground truth but is
+single-target, which satisfies a naive "has track ids" check while making identity
+metrics vacuous.
 
 Those facts were already in the registry and were already honoured in four
-separate places. That works, but adding a fifth dataset then means remembering
-four places, and forgetting one is a silent hole rather than a failure. So the
+separate places. That works, but adding a dataset then means remembering all four
+places, and forgetting one is a silent hole rather than a failure. So the
 derivation lives here once, and `matrix list`, `evaluate --cross`, the `track-eval`
 gate, `resolve_tiling` and `/api/capabilities` all read from it.
 
@@ -159,7 +161,7 @@ production model, and would make "do the sources interfere?" unanswerable.
 
 One `Trainer` for two model families — they share a data pipeline, an evaluator
 and an export path, and the only thing that differs is the kwargs passed to
-ultralytics. `matrix.py` plans the 14 runs; `predictor.py` loads one;
+ultralytics. `matrix.py` plans the 28 runs; `predictor.py` loads one;
 `evaluate.py` scores it, including per-dataset cross-evaluation.
 
 `augment.py` holds the two augmentations ultralytics does not provide — cutout
@@ -230,7 +232,7 @@ there.
 ## Testing
 
 ```powershell
-python -m pytest              # 295 tests, no GPU, no datasets, ~25 s
+python -m pytest              # 347 tests, no GPU, no datasets
 .\scripts\setup_env.ps1 -Extras dev
 ```
 

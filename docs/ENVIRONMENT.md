@@ -1,9 +1,8 @@
 # Environment
 
-The project runs on three kinds of machine: a CPU-only dev box, a GTX 1070 that
-cannot run current torch at all, and two supervisor boxes with an RTX 4090 and an
-RTX 5090. One repository handles all of them; the profile system is what makes that
-possible.
+The project runs on several kinds of machine: a CPU-only dev box, a GTX 1070 that
+cannot run current torch at all, and GPU boxes with an RTX 4090 or RTX 5090. One
+repository handles all of them; the profile system is what makes that possible.
 
 **This project does not create virtual environments.** It is meant to live in an
 environment you already maintain, because a second environment per machine is
@@ -48,7 +47,7 @@ from an environment that passes the test suite, `ruff`, `mypy` and
 ```
 
 **torch and torchvision are deliberately absent from it.** One file cannot pin
-five GPU tiers, and a wrong torch build is the single most expensive mistake in
+every GPU tier, and a wrong torch build is the single most expensive mistake in
 this project — it installs cleanly, imports cleanly, reports CUDA as available,
 and then fails hours into training. So `-Profile` still governs torch, and the
 two work together rather than conflicting:
@@ -61,7 +60,7 @@ two work together rather than conflicting:
 | `blackwell` | `https://download.pytorch.org/whl/cu128` |
 | `cpu` | default PyPI wheel |
 
-If you have a pre-downloaded wheel — this repo's Pascal box uses
+If you have a pre-downloaded wheel — the handover machine uses
 `D:\wheels\torch-<version>+cu126-cp311-cp311-win_amd64.whl`, which is how a cu126
 build survives on a card whose driver predates that runtime — install it with
 `pip install <path-to-wheel>`, or point the script at a wheel directory:
@@ -211,7 +210,7 @@ runs       <project>\artifacts\runs             # one dir per (model, combo)
 processed  <project>\data\processed
 ```
 
-Override the data root when it must live on another volume — with 460 GB of
+Override the data root when it must live on another volume — with ~475 GB of
 datasets involved, this comes up:
 
 ```powershell
@@ -226,8 +225,9 @@ matters when a download extra pulls ~2.5 GB of wheels and C: has 12 GB free.
 
 ## Known-good environment
 
-Recorded automatically from the environment this repository is developed and
-verified in — Windows, Python 3.11, CUDA 12.6, on a GTX 1070 (sm_61):
+Recorded automatically from the environment the project is developed and verified
+in — Windows, Python 3.11, CUDA 12.6, on a GTX 1070 (sm_61). On the handover
+machine this is `D:\envs\ml\python.exe`.
 
 ```
 python      3.11.17
@@ -259,6 +259,10 @@ A second `ml` environment exists on some machines under both
 different torch builds, different numpy. The scripts resolve the **active** conda
 env first (`$env:CONDA_PREFIX`), and `run_pipeline.ps1 -Python` overrides it
 explicitly when in doubt. Check which one you got with `anti-uav version`.
+
+On the handover machine the verified environment is `D:\envs\ml`. Use
+`D:\envs\ml\python.exe` explicitly until you have confirmed that the active conda
+env resolves to the same interpreter.
 
 ### ultralytics 8.4 specifics worth knowing
 

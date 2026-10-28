@@ -20,12 +20,32 @@ exported — is in
 
 ---
 
+## Status at handover
+
+The software is complete and verified. The experiment matrix is not: **one of the
+twenty-eight planned runs is trained**. Read [`HANDOVER.md`](HANDOVER.md) first for
+the exact state, the one real result, and the recommended next steps.
+
+| area | state |
+| --- | --- |
+| Pipeline (data → train → evaluate → track → export → deploy render) | implemented and smoke-tested |
+| Tests, lint, typecheck | 347 passed; ruff and mypy clean |
+| Experiment matrix | 1 of 28 runs trained (`yolo11n` on `dvb`) |
+| Raw datasets | not in git; re-download with `anti-uav download` |
+| TensorRT / site deployment | code and configs only; no engine built |
+
+`artifacts/tracks/` and the zero-valued rows in
+`artifacts/runs/_eval/cross_yolo11n.json` are smoke outputs, not benchmark
+results. [`HANDOVER.md`](HANDOVER.md) explains which numbers are real.
+
+---
+
 ## The one-paragraph version
 
 Eight public datasets, harmonised into a single two-class `drone` / `bird` label
 space, split **by sequence** so no video's adjacent frames straddle the
-train/val boundary, and used in fourteen combinations. Two detectors are
-trained on all fourteen — twenty-eight runs — sharing one data pipeline, one
+train/val boundary, and used in fourteen combinations. The full matrix trains two
+detectors on all fourteen — twenty-eight runs — sharing one data pipeline, one
 evaluator and one tracker stack. The hard part is not the detectors; it is that
 five of the eight sources are **drone-only**, so precision measured on them
 cannot falsify a false-positive claim, and that the smallest targets (MM-UAV,
@@ -38,10 +58,10 @@ explicitly rather than assumed away.
 
 | alias | dataset | modality | frames | median target | bird negatives | acquisition |
 | --- | --- | --- | --- | --- | --- | --- |
-| `dvb` | Drone-vs-Bird (WOSDETC/AVSS) | RGB | 104,760 | 34×23 px | **yes** | Kaggle |
-| `mavvid` | MAV-VID (Cranfield) | RGB | 40,232 | 215×128 px | **yes** | Bitbucket |
-| `antiuav` | Anti-UAV300 (INEE) | RGB+IR | ~225,000 | 125×59 / 52×29 px | no | Google Drive |
-| `mmuav` | MM-UAV (tri-modal MOT) | RGB (+IR) | 2.8 M (subset) | **12×5 px** | no | Baidu Pan |
+| `dvb` | Drone-vs-Bird (WOSDETC/AVSS) | RGB | 104,760 | 28 px (34×23) | **yes** | Kaggle |
+| `mavvid` | MAV-VID (Cranfield) | RGB | 40,232 | 171 px (215×128) | **yes** | Bitbucket |
+| `antiuav` | Anti-UAV300 (INEE) | RGB+IR | ~225,000 | 92 px (125×59 / 52×29) | no | Google Drive |
+| `mmuav` | MM-UAV (tri-modal MOT) | RGB (+IR) | 2.8 M (subset) | **12 px** (12×5) | no | Baidu Pan |
 | `kaggle_cybersimar` | Kaggle Drone Detection (cybersimar08) | RGB | 8,500 | 64 px | no | Kaggle |
 | `github_maciullo` | DroneDetectionDataset (Maciullo) | RGB | 12,000 | 80 px | **yes** | GitHub |
 | `hf_seraphim` | Seraphim Drone Detection (HuggingFace) | RGB | 15,000 | 72 px | no | HuggingFace |
@@ -64,6 +84,7 @@ tracked.
 
 ```powershell
 # 0. environment (reuses an existing conda env; see docs/ENVIRONMENT.md)
+#    choose -Profile for this machine: pascal, ada, blackwell, ...
 .\scripts\setup_env.ps1 -Profile pascal -UseLockFile
 anti-uav verify-env
 anti-uav fetch-weights
@@ -72,8 +93,10 @@ anti-uav fetch-weights
 anti-uav download --dataset all --dry-run
 anti-uav download --dataset dvb
 anti-uav download --dataset mavvid
-anti-uav download --dataset github_maciullo     # no credentials needed
-anti-uav download --dataset hf_seraphim         # no credentials needed
+anti-uav download --dataset github_maciullo      # no credentials needed
+anti-uav download --dataset hf_seraphim          # no credentials needed
+anti-uav download --dataset kaggle_cybersimar
+anti-uav download --dataset kaggle_banderastepan
 anti-uav download --dataset antiuav --variant 300
 anti-uav download --dataset mmuav --max-sequences 150 --modalities rgb
 
@@ -90,11 +113,11 @@ anti-uav matrix run --models yolo11n,rtdetr_x2 --combos all --dry-run
 .\scripts\train_matrix.ps1 -Profile blackwell -DryRun
 
 # 4. evaluate, track, export
-anti-uav evaluate       --run artifacts/runs/yolo11n/all8 --cross
-anti-uav track-eval --run artifacts/runs/yolo11n/all8 --dataset mmuav
-anti-uav replay     --run artifacts/runs/yolo11n/all8 --dataset mmuav --sequence 0007
-anti-uav predict    --run artifacts/runs/yolo11n/all8 --source clip.mp4 --save out/
-anti-uav export     --run artifacts/runs/yolo11n/all8 --formats onnx,tensorrt --fp16
+anti-uav evaluate       --run artifacts/runs/yolo11n/yolo11n__all8 --cross
+anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav
+anti-uav replay     --run artifacts/runs/yolo11n/yolo11n__all8 --dataset mmuav --sequence 0007
+anti-uav predict    --run artifacts/runs/yolo11n/yolo11n__all8 --source clip.mp4 --save out/
+anti-uav export     --run artifacts/runs/yolo11n/yolo11n__all8 --formats onnx,tensorrt --fp16
 
 # 5. the interface
 anti-uav serve      # http://127.0.0.1:8000
@@ -122,7 +145,7 @@ Full command reference: **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 configs/          every tunable, in one place
   datasets/       registry: sources, licences, class maps, grouping
   train/          yolo11n.yaml, rtdetr_x2.yaml, per-GPU overrides
-  matrix.yaml     the 14-run experiment matrix
+  matrix.yaml     the 28-run experiment matrix (2 models x 14 combos)
   rules/          drone_rules.yaml  - section 4 of the diagram
   coverage/       coverage_map.yaml  - section 3, 100 cameras (generated)
 src/anti_uav/
@@ -162,7 +185,7 @@ docs/             commands, datasets, experiments, environment, architecture
   `pip install torch` cannot run on a GTX 1070 at all.
   `configs/train/overrides/<profile>.yaml` plus `anti-uav verify-env` make that a
   startup error instead of a training run wasted. `requirements-lock.txt`
-  therefore omits torch deliberately: one file cannot pin five GPU tiers, so
+  therefore omits torch deliberately: one file cannot pin every GPU tier, so
   `-Profile` still owns it and `verify-env` still checks the pairing.
 * **The checkpoints are prefetched, not discovered mid-run.** Ultralytics
   downloads a missing `base_weights` from inside the trainer, so on a blocked
@@ -176,12 +199,14 @@ docs/             commands, datasets, experiments, environment, architecture
 
 | file | what is in it |
 | --- | --- |
+| [HANDOVER.md](HANDOVER.md) | **read first:** current state, the one real result, what is unfinished, next steps |
 | [docs/COMMANDS.md](docs/COMMANDS.md) | every command, in run order, with what it refuses to do |
 | [docs/DATASETS.md](docs/DATASETS.md) | the eight datasets, how to fetch each, the MM-UAV 400 GB → 12 GB subsetting |
 | [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | the 28-run matrix, what to run first, how to read results without fooling yourself |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | GPU profiles, why CUDA 12.8 breaks a GTX 1070, extras, disk planning |
 | [notebooks/kaggle_dvb.ipynb](notebooks/kaggle_dvb.ipynb) | end-to-end run on Kaggle T4x2: install, download, preprocess, train, evaluate |
-| [notebooks/kaggle_combined.ipynb](notebooks/kaggle_combined.ipynb) | **one YOLO11n trained on all eight datasets** — the multi-dataset model |
+| [notebooks/kaggle_mavvid.ipynb](notebooks/kaggle_mavvid.ipynb) | the second bird-positive source, end to end |
+| [notebooks/kaggle_combined.ipynb](notebooks/kaggle_combined.ipynb) | **recipe for one YOLO11n on all eight datasets** — the multi-dataset model |
 | [notebooks/kaggle_maciullo.ipynb](notebooks/kaggle_maciullo.ipynb) | the third bird-negative source; no credentials needed |
 | [notebooks/kaggle_cybersimar.ipynb](notebooks/kaggle_cybersimar.ipynb) | the first added Kaggle source |
 | [notebooks/kaggle_seraphim.ipynb](notebooks/kaggle_seraphim.ipynb) | the HuggingFace source |
@@ -191,13 +216,16 @@ docs/             commands, datasets, experiments, environment, architecture
 
 ## Tests
 
+Use the environment's interpreter; on the handover machine that is
+`D:\envs\ml\python.exe` (the system Python does not have `ultralytics` or `cv2`).
+
 ```powershell
-python -m pytest                      # 347 tests, no GPU, no datasets, ~90 s
+python -m pytest                      # 347 tests, no GPU, no datasets
 python -m ruff check src tests scripts
 python -m mypy
 ```
 
-Eight smoke scripts cover the end-to-end paths pytest cannot reach without a GPU
+Seven smoke scripts cover the end-to-end paths pytest cannot reach without a GPU
 or a 100 GB download. They run on CPU in a few seconds:
 
 ```powershell

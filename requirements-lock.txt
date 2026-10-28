@@ -17,7 +17,7 @@
 # ---------------------------------------------------------------------------
 # torch and torchvision are deliberately ABSENT
 # ---------------------------------------------------------------------------
-# One lock cannot pin five GPU tiers. And a wrong torch build does not fail at
+# One lock cannot pin every GPU tier. And a wrong torch build does not fail at
 # install time - it imports cleanly, reports CUDA as available, and then dies
 # hours into training with "no kernel image is available for execution on the
 # device". So torch is installed per machine, and `anti-uav verify-env` checks

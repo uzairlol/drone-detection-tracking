@@ -1,7 +1,7 @@
 # artifacts/preds — annotated frames from `anti-uav predict`
 
 ```powershell
-anti-uav predict --run artifacts/runs/yolo11n/all4 --source frame.jpg --save out/
+anti-uav predict --run artifacts/runs/yolo11n/yolo11n__all4 --source frame.jpg --save out/
 ```
 
 Draws boxes, class labels and tracker ids onto frames so you can look at what the

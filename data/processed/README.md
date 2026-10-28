@@ -4,11 +4,11 @@ Written by `anti-uav build`. This is the only layer ultralytics ever sees.
 
 ```powershell
 anti-uav build --combo dvb
-anti-uav build --combo all4
-anti-uav sanity --combo all4     # gate. non-zero exit means do not train
+anti-uav build --combo all8
+anti-uav sanity --combo all8     # gate. non-zero exit means do not train
 ```
 
-## The seven combo directories
+## The fourteen combo directories
 
 | directory | sources | tiling | why it is in the matrix |
 | --- | --- | --- | --- |
@@ -16,9 +16,16 @@ anti-uav sanity --combo all4     # gate. non-zero exit means do not train
 | `mavvid/` | mavvid | none | 171 px targets, pre-annotated. The sanity run. |
 | `antiuav/` | antiuav | none | drone-only; second modality; visibility flags. |
 | `mmuav/` | mmuav | 256 px | 12 px targets, MOT ground truth. |
+| `kaggle_cybersimar/` | kaggle_cybersimar | none | community-curated drone-only set. |
+| `github_maciullo/` | github_maciullo | none | third bird-negative source. |
+| `hf_seraphim/` | hf_seraphim | none | hub-hosted drone-only distribution. |
+| `kaggle_banderastepan/` | kaggle_banderastepan | none | largest added Kaggle source. |
 | `dvb+mavvid/` | dvb, mavvid | per-dataset | two target scales in one model. |
+| `birds3/` | dvb, mavvid, github_maciullo | per-dataset | all three bird-negative sources. |
 | `dvb+mavvid+antiuav/` | + antiuav | per-dataset | first combo mixing RGB and thermal. |
-| `all4/` | all four | per-dataset | candidate production model. |
+| `birds3+antiuav/` | birds3 + antiuav | per-dataset | bird rejection plus a second modality. |
+| `all4/` | the original four | per-dataset | the four-source reference combo. |
+| `all8/` | all eight | per-dataset | the eight-source deploy candidate. |
 
 The `+` in a slug is a literal directory name. Quote it in PowerShell.
 

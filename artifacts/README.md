@@ -19,7 +19,7 @@ are the only mutable trees; `ANTI_UAV_DATA_DIR` relocates both together.
 ```powershell
 anti-uav matrix list                              # what exists
 anti-uav list-runs                               # same, with a weights column
-anti-uav evaluate --run artifacts/runs/yolo11n/all4 --cross
+anti-uav evaluate --run artifacts/runs/yolo11n/yolo11n__all4 --cross
 ```
 
 The `weights/best.pt` file is the resume/skip signal: the matrix planner and

@@ -4,6 +4,10 @@
 explains what the matrix is for, how to run it, and — the part that matters most —
 how to read the results without fooling yourself.
 
+> **Status at handover:** one of the 28 runs is complete (`yolo11n` on `dvb`).
+> The plan below is sound; the other 27 are the remaining work. See
+> [`../HANDOVER.md`](../HANDOVER.md) for the result and the recommended order.
+
 ---
 
 ## The matrix
@@ -48,7 +52,7 @@ path and the dataset summary. Use it before every expensive job.
 
 ## What to run first
 
-You do not have time for all 28 on the first pass. Three runs answer most of it:
+A full 28-run pass is expensive. Three runs answer most of it:
 
 ```powershell
 anti-uav train --model yolo11n --combo dvb
@@ -89,22 +93,23 @@ trained on both should not.
 ### The number that matters is per-dataset, not combined
 
 ```powershell
-anti-uav evaluate --run artifacts/runs/yolo11n/all4 --cross
+anti-uav evaluate --run artifacts/runs/yolo11n/yolo11n__all4 --cross
 ```
 
 A single combined mAP over four datasets is close to meaningless, because the
 datasets disagree about what a hard sample is. MM-UAV's 12 px targets dominate the
 loss; Drone-vs-Bird's birds dominate the precision. Read the per-dataset table.
 
-### Three of the four datasets cannot falsify precision
+### Five of the eight datasets cannot falsify precision
 
-`antiuav` and `mmuav` contain **no birds**. Precision measured on them is
-unfalsifiable: a detector that labels every bird as a drone would score perfectly.
-The evaluator prints a note next to those numbers rather than leaving you to
-remember.
+`antiuav`, `mmuav`, `kaggle_cybersimar`, `hf_seraphim` and `kaggle_banderastepan`
+contain **no birds**. Precision measured on them is unfalsifiable: a detector
+that labels every bird as a drone would score perfectly. The evaluator prints a
+note next to those numbers rather than leaving you to remember.
 
-Real precision evidence comes only from `dvb` and `mavvid` — **two** sources, not
-one. `matrix.yaml` has a combo called `dvb+mavvid` for exactly that reason.
+Real precision evidence comes only from `dvb`, `mavvid` and `github_maciullo` —
+**three** sources. `matrix.yaml` has a combo called `birds3` for exactly that
+reason.
 
 ### Check what a run is allowed to claim, before you spend the GPU hours
 
@@ -148,8 +153,9 @@ switches will be meaningless.
 - Same image size. A combo with `mmuav` tiles at 256 px; the others train at
   640. That is not a like-for-like comparison of architectures, and the log says
   so per run.
-- Same profile. `batch` is `-1` (auto) by default and resolves differently per GPU.
-  Runs from different boxes are not comparable.
+- Same profile. `batch` comes from the active profile override and is an absolute
+  number per model, so runs from different boxes or profiles are not comparable
+  unless the batch is pinned explicitly.
 - Same tiling. `anti-uav matrix list` prints `tiling: on/off` per run.
 
 ### What "good" looks like
@@ -167,19 +173,21 @@ switches will be meaningless.
 Detection metrics say nothing about tracking. Score them separately:
 
 ```powershell
-anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav
-anti-uav track-eval --run artifacts/runs/yolo11n/all4 --dataset mmuav --trackers sort,bytetrack,botsort
+anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all4 --dataset mmuav
+anti-uav track-eval --run artifacts/runs/yolo11n/yolo11n__all4 --dataset mmuav --trackers sort,bytetrack,botsort
 ```
 
-This needs MOT ground truth, which means MM-UAV. And MM-UAV's strict trajectory
+This needs MOT ground truth: MM-UAV for meaningful identity metrics. Anti-UAV
+also carries MOT ground truth, but it is single-target, so IDF1 and ID switches
+there are vacuous. MM-UAV's strict trajectory
 annotation means its scores are **not** comparable to MOTA on MOT17-style data —
 read them as absolute, not relative to published numbers.
 
 To understand a specific failure rather than a score:
 
 ```powershell
-anti-uav replay --run artifacts/runs/yolo11n/all4 --dataset mmuav --sequence 0007 --tracker botsort
-anti-uav replay --run artifacts/runs/yolo11n/all4 --dataset mmuav --sequence 0007 --tracker bytetrack --dump out/
+anti-uav replay --run artifacts/runs/yolo11n/yolo11n__all4 --dataset mmuav --sequence 0007 --tracker botsort
+anti-uav replay --run artifacts/runs/yolo11n/yolo11n__all4 --dataset mmuav --sequence 0007 --tracker bytetrack --dump out/
 ```
 
 `replay` needs no ground truth. Watch the same clip with two trackers and the
@@ -205,7 +213,7 @@ anti-uav serve     # the UI reads runs/ and shows the matrix as a table
 Rough, from the per-run estimate `matrix list` prints (multiply by the frame count
 `anti-uav build` reports; tiled combos are 4–6x that):
 
-| where | throughput guide | 14 runs |
+| where | throughput guide | 14 combos (one model) |
 | --- | --- | --- |
 | CPU | ~0.3 it/s at batch 4, AMP off | not viable |
 | RTX 1070 (Pascal) | ~12 it/s at batch 8 | days, and FP16 is unusable |
@@ -216,7 +224,7 @@ The estimate is an order-of-magnitude guide, not a measurement. `matrix list`
 prints it per run with the actual batch and AMP state so you can compare against
 a known run.
 
-If you only have one GPU-day, run `yolo11n` on `dvb` and `all4` first. They are
+If you only have one GPU-day, run `yolo11n` on `dvb` and `all8` first. They are
 the two that change what you do next.
 
 ---
@@ -238,11 +246,11 @@ anti-uav sanity --combo all4      # before every training run
 
 ---
 
-## A note on what 14 runs can and cannot tell you
+## A note on what 28 runs can and cannot tell you
 
-This is four public datasets, two architectures, and one site model. It answers
+This is eight public datasets, two architectures, and one site model. It answers
 "which of these combinations is worth deploying on this hardware", and it will
 not answer "how well does this detect an unseen drone type at 40 m against a
-cluttered sky". Four datasets is a design choice made under a time budget, not a
+cluttered sky". Eight datasets is a design choice made under a time budget, not a
 claim of coverage. Treat the ranking as a ranking; treat the absolute numbers as
-specific to these four sources.
+specific to these eight sources.

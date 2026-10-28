@@ -16,8 +16,11 @@ contain no secrets — they are shape templates.
 | `baidu` | `antiuav` 410, `mmuav` | login cookie | `data/raw/_credentials/.baidu_cookies.json` |
 | `http` | `dvb` annotations | **none** | — |
 
-Good news: three of the four datasets need no account at all. Only `dvb` (Kaggle)
-and the two Baidu-hosted variants need credentials.
+Most datasets need no account: `mavvid` (Bitbucket), `antiuav` 300 (Google
+Drive), `antiuav` 600 (ModelScope), `github_maciullo`, and `hf_seraphim`. Kaggle
+credentials are needed for `dvb`, `kaggle_cybersimar`, and
+`kaggle_banderastepan` (and the Kaggle fallback for `mavvid`). Baidu credentials
+are needed for `antiuav` 410 and `mmuav`.
 
 ## Kaggle — needed for `dvb`, the important one
 
@@ -26,7 +29,7 @@ kaggle login --accept-dictionary
 ```
 
 That writes `~/.kaggle/kaggle.json` **outside** this directory, and it is the
-step most likely to be missing on a fresh office machine. The backend checks
+step most likely to be missing on a fresh machine. The backend checks
 `access_token`, `access_token.txt` *and* `kaggle.json`, because the modern CLI
 writes the first and will happily ignore a stale `kaggle.json` that is present but
 no longer valid — gating on `kaggle.json` alone reports "configured" when it is
