@@ -29,4 +29,4 @@ workers: 8
 
 notes: >-
   RTX 3090 (24 GB) and 4090 (24 GB) both fit YOLO11n at batch ~96 and
-  RT-DETR-x2 at batch ~24 with AMP. Run the full 7-combo sweep here.
+  RT-DETR-x2 at batch ~24 with AMP. Run the full fourteen-combo sweep here.

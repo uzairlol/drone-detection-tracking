@@ -30,8 +30,8 @@ workers: 8
 
 notes: >-
   RT-DETR-x2 at batch ~20 and YOLO11n at batch ~128, both with AMP, at 640 px.
-  Tiled combos (dvb, mmuav, dvb+mavvid, dvb+mavvid+antiuav, all4) multiply the
-  frame count by roughly 4-6x, so budget accordingly.
+  Tiled combos (anything containing dvb or mmuav) multiply the frame count by
+  roughly 4-6x, so budget accordingly.
 
   If `verify-env` reports sm_120 missing, your torch wheel is too old. Fix with:
     pip install --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu128

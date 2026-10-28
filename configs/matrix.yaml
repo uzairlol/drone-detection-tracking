@@ -192,7 +192,7 @@ combos:
     force_imgsz: 640
     enabled: true
     notes: >-
-      The pre-existing production combo. Kept alongside all8 so the four new
+      The four-source reference combo. Kept alongside all8 so the four new
       sources can be evaluated as an addition rather than as a replacement -
       the two rows together say whether the extra data helped.
 

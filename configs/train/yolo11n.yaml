@@ -7,7 +7,7 @@
 #   * nano backbone - 2.6 M params, the smallest thing that holds up on 12 px
 #     targets without going to a bigger box
 #   * 640 px input, no tiling by default
-#   * heavy augmentation, because four heterogeneous sources is a lot of variance
+#   * heavy augmentation, because eight heterogeneous sources is a lot of variance
 #
 # Tiling is applied per dataset at build time (see configs/matrix.yaml), not here.
 # ---------------------------------------------------------------------------
@@ -98,6 +98,6 @@ notes: >-
   project-owned callback on `on_train_batch_start`; see
   src/anti_uav/detection/augment.py.
 
-  If you only have time for two runs, run `yolo11n` on `dvb` and on `all4`. dvb
-  tells you whether bird suppression works; all4 tells you whether the
+  If you only have time for two runs, run `yolo11n` on `dvb` and on `all8`. dvb
+  tells you whether bird suppression works; all8 tells you whether the
   combination is worth deploying.

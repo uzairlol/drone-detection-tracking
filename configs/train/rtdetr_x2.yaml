@@ -99,4 +99,4 @@ notes: >-
   not by ultralytics - see src/anti_uav/detection/augment.py.
 
   If you want a fair accuracy headline on a budget, train rtdetr_x2 on `dvb` and
-  `all4` only, and let the full 7-combo sweep be a YOLO11n exercise.
+  `all8` only, and let the full fourteen-combo sweep be a YOLO11n exercise.

@@ -24,5 +24,5 @@ force_imgsz: 640
 workers: 8
 
 notes: >-
-  The default profile for the internship supervisor's 4090 if you want the log
-  to name the architecture explicitly.
+  The default profile for a 4090 lab machine when you want the log to name the
+  architecture explicitly.
